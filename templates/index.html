@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drishti AI — Intelligent Face Attendance System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="ph ph-aperture"></i>
+                </div>
+                <div>
+                    <h2>Drishti AI</h2>
+                    <span class="brand-subtitle">Smart Attendance System</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" onclick="switchTab('dashboard')">
+                    <i class="ph ph-squares-four"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('students')">
+                    <i class="ph ph-users-three"></i>
+                    <span>Student Directory</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('register')">
+                    <i class="ph ph-user-plus"></i>
+                    <span>Enroll Student</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('attendance')">
+                    <i class="ph ph-webcam"></i>
+                    <span>Live Tracking</span>
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <span class="status-dot online"></span>
+                    <span>System Active</span>
+                </div>
+                <p class="copyright">Developed by Atharva</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- 1. Dashboard Analytics View -->
+            <section id="dashboard" class="view-section active">
+                <header class="section-header">
+                    <div>
+                        <h1>Real-Time Dashboard</h1>
+                        <p>Live attendance insights and synchronized Excel records.</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="date-badge" id="current-date">--</div>
+                    </div>
+                </header>
+
+                <!-- Metric Cards Grid -->
+                <div class="metrics-grid">
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon blue-glow">
+                            <i class="ph ph-users-four"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3 id="stat-registered">0</h3>
+                            <p>Registered Students</p>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon green-glow">
+                            <i class="ph ph-check-circle"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3 id="stat-present">0</h3>
+                            <p>Present Today</p>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon red-glow">
+                            <i class="ph ph-user-minus"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3 id="stat-absent">0</h3>
+                            <p>Absent Today</p>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon purple-glow">
+                            <i class="ph ph-chart-line-up"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3 id="stat-rate">0%</h3>
+                            <p>Attendance Rate</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Data Table Container -->
+                <div class="data-table-container glass-panel">
+                    <div class="table-toolbar">
+                        <div class="toolbar-title">
+                            <h3>Attendance Logs</h3>
+                            <span class="live-indicator"><i class="ph ph-broadcast"></i> Live Sync</span>
+                        </div>
+                        <div class="toolbar-actions">
+                            <div class="search-box">
+                                <i class="ph ph-magnifying-glass"></i>
+                                <input type="text" id="log-search" placeholder="Search by name or ID..." onkeyup="filterLogsTable()">
+                            </div>
+                            <input type="date" id="date-filter" class="date-picker-input" onchange="fetchLogsByDate()">
+                            <button class="btn-secondary" onclick="exportExcel()" title="Export to Excel (.xlsx)">
+                                <i class="ph ph-file-xlsx"></i>
+                                <span>Export Excel</span>
+                            </button>
+                            <button class="btn-icon" onclick="fetchStats()" title="Refresh Logs">
+                                <i class="ph ph-arrows-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Check-in Time</th>
+                                <th>Date</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 2. Student Directory View -->
+            <section id="students" class="view-section hidden">
+                <header class="section-header">
+                    <div>
+                        <h1>Student Directory</h1>
+                        <p>Registered student profiles and facial reference database.</p>
+                    </div>
+                </header>
+
+                <div id="students-grid" class="students-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- 3. Register Student View -->
+            <section id="register" class="view-section hidden">
+                <header class="section-header">
+                    <div>
+                        <h1>Enroll New Student</h1>
+                        <p>Capture facial embeddings and update SQLite database.</p>
+                    </div>
+                </header>
+                
+                <div class="form-container glass-panel">
+                    <div class="form-illustration">
+                        <i class="ph ph-identification-card"></i>
+                        <h3>Biometric Enrollment</h3>
+                        <p>Ensure student faces the camera with clear lighting. The system auto-selects the sharpest photo frame.</p>
+                    </div>
+
+                    <form id="register-form" onsubmit="handleRegister(event)">
+                        <div class="input-group">
+                            <label for="student-name">Full Name *</label>
+                            <input type="text" id="student-name" placeholder="e.g. Atharva Tripathi" required autocomplete="off">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="student-id">Student ID *</label>
+                            <input type="text" id="student-id" placeholder="e.g. 1001" required autocomplete="off">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="student-dept">Department</label>
+                            <input type="text" id="student-dept" placeholder="e.g. Artificial Intelligence & DS" autocomplete="off">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="student-email">Email Address (for alerts)</label>
+                            <input type="email" id="student-email" placeholder="e.g. student@university.edu" autocomplete="off">
+                        </div>
+
+                        <button type="submit" class="btn-primary glow-btn" id="btn-register">
+                            <span>Capture Face & Enroll</span>
+                            <i class="ph ph-camera"></i>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 4. Live Attendance View -->
+            <section id="attendance" class="view-section hidden">
+                <header class="section-header">
+                    <div>
+                        <h1>Live Tracking Engine</h1>
+                        <p>Launch the intelligent camera monitoring system.</p>
+                    </div>
+                </header>
+
+                <div class="camera-launcher glass-panel">
+                    <div class="radar-animation">
+                        <div class="radar-circle"></div>
+                        <div class="radar-circle delay-1"></div>
+                        <i class="ph ph-scan"></i>
+                    </div>
+                    <h2>Initialize Camera Engine</h2>
+                    <p>Launches a high-resolution camera tracking session with dlib 128-D embedding matching and direct Excel sync. Press 'q' on the camera window to stop.</p>
+                    
+                    <button class="btn-primary glow-btn pulse-btn" id="btn-start-attendance" onclick="startAttendance()">
+                        <span>Start Camera Tracking</span>
+                        <i class="ph ph-rocket-launch"></i>
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
