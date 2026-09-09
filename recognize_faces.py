@@ -1,5 +1,6 @@
 import cv2
 import os
+import sys
 import face_recognition
 import pandas as pd
 from datetime import datetime
@@ -8,6 +9,13 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import threading
 import time
+
+# Force UTF-8 stdout encoding on Windows to prevent CP1252 charmap encoding errors
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 import database
 import excel_manager
@@ -27,7 +35,7 @@ MATCH_TOLERANCE = 0.45
 def send_email_alert(name, student_id, time_str):
     """Dispatches attendance notification email asynchronously."""
     if not SENDER_EMAIL or not SENDER_PASSWORD or not RECEIVER_EMAIL:
-        print("[Email Alert] Credentials omitted in .env — skipping email dispatch.")
+        print("[Email Alert] Credentials omitted in .env -- skipping email dispatch.")
         return False
 
     def send_job():
@@ -70,7 +78,7 @@ def load_known_face_encodings(known_dir=KNOWN_FACES_DIR):
     departments = []
 
     if not os.path.exists(known_dir):
-        print(f"[!] '{known_dir}' directory not found. Please register students first.")
+        print(f"[INFO] '{known_dir}' directory not found. Please register students first.")
         return encodings, names, ids, departments
 
     for filename in os.listdir(known_dir):
@@ -82,7 +90,7 @@ def load_known_face_encodings(known_dir=KNOWN_FACES_DIR):
             parts = stem.rsplit('_', 1)
             name, sid = parts[0].replace("_", " "), parts[1]
         except (ValueError, IndexError):
-            print(f"[!] Skipping '{filename}': Expected naming format 'Name_ID.jpg'")
+            print(f"[WARN] Skipping '{filename}': Expected naming format 'Name_ID.jpg'")
             continue
 
         student_info = db_students.get(sid, {})
@@ -95,7 +103,7 @@ def load_known_face_encodings(known_dir=KNOWN_FACES_DIR):
             face_encs = face_recognition.face_encodings(img)
 
             if len(face_encs) == 0:
-                print(f"[!] No face detected in reference photo '{filename}' — skipping.")
+                print(f"[WARN] No face detected in reference photo '{filename}' -- skipping.")
                 continue
 
             encodings.append(face_encs[0])
@@ -104,7 +112,7 @@ def load_known_face_encodings(known_dir=KNOWN_FACES_DIR):
             departments.append(dept)
             print(f"[+] Loaded face embedding for: {full_name} (ID: {sid}, Dept: {dept})")
         except Exception as e:
-            print(f"[!] Error processing {filename}: {e}")
+            print(f"[ERROR] Error processing {filename}: {e}")
 
     return encodings, names, ids, departments
 
@@ -114,7 +122,7 @@ def recognize_faces(known_dir=KNOWN_FACES_DIR):
     print("[Recognition Engine] Initializing face recognition system...")
     known_encodings, known_names, known_ids, known_depts = load_known_face_encodings(known_dir)
 
-    print(f"[✓] Successfully loaded {len(known_encodings)} student face model(s).")
+    print(f"[OK] Successfully loaded {len(known_encodings)} student face model(s).")
     print("[Recognition Engine] Launching camera stream... Press 'q' to stop.\n")
 
     # Connect to camera via robust camera_utils
@@ -134,7 +142,6 @@ def recognize_faces(known_dir=KNOWN_FACES_DIR):
         if not use_synthetic and cap:
             ret, frame = cap.read()
             if not ret or frame is None:
-                # Brief retry for temporary frame drop
                 time.sleep(0.1)
                 ret, frame = cap.read()
                 if not ret or frame is None:
@@ -199,7 +206,7 @@ def recognize_faces(known_dir=KNOWN_FACES_DIR):
                             send_email_alert(name, student_id, time_marked)
 
                         cooldown_tracker[student_id] = now
-                        print(f"[✓] Check-in logged for {name} ({student_id}) at {time_marked}")
+                        print(f"[OK] Check-in logged for {name} ({student_id}) at {time_marked}")
 
             cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
             cv2.rectangle(frame, (left, bottom - 42), (right, bottom), color, cv2.FILLED)
@@ -211,7 +218,7 @@ def recognize_faces(known_dir=KNOWN_FACES_DIR):
         status_banner = f"Drishti AI Tracker | Active Faces: {len(face_locations)} | Press 'q' to exit"
         cv2.putText(frame, status_banner, (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
 
-        cv2.imshow('Drishti AI — Live Tracking Engine', frame)
+        cv2.imshow('Drishti AI -- Live Tracking Engine', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print("[Recognition Engine] Tracking session ended by operator.")

@@ -2,6 +2,14 @@ import cv2
 import os
 import sys
 import time
+
+# Force UTF-8 stdout encoding on Windows to prevent CP1252 charmap encoding errors
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import database
 import camera_utils
 
@@ -28,7 +36,7 @@ def capture_best_face(student_name, student_id, department='General', email='', 
 
     print(f"[Capture Engine] Starting capture for {student_name} (ID: {student_id}, Dept: {department})...")
 
-    # Connect to camera via robust camera_utils
+    # Connect to camera via camera_utils
     cap, cam_idx, cam_backend = camera_utils.get_working_camera(preferred_index=0)
     
     use_synthetic = False
@@ -51,7 +59,6 @@ def capture_best_face(student_name, student_id, department='General', email='', 
         if not use_synthetic and cap:
             ret, frame = cap.read()
             if not ret or frame is None:
-                # Retry frame grab briefly
                 time.sleep(0.1)
                 ret, frame = cap.read()
                 if not ret or frame is None:
@@ -85,7 +92,7 @@ def capture_best_face(student_name, student_id, department='General', email='', 
         cv2.putText(frame, f"Sharpness Score: {best_score:.1f}", (30, 115),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (220, 220, 0), 1)
 
-        cv2.imshow('Drishti AI — Face Enrollment', frame)
+        cv2.imshow('Drishti AI -- Face Enrollment', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print("[Capture Engine] Capture process cancelled by user.")
             break
@@ -107,7 +114,7 @@ def capture_best_face(student_name, student_id, department='General', email='', 
             email=email,
             photo_path=output_path
         )
-        print(f"[✓] Registration complete for {student_name}! Saved: {output_path} (Sharpness: {best_score:.1f})")
+        print(f"[OK] Registration complete for {student_name}! Saved: {output_path} (Sharpness: {best_score:.1f})")
         return True
     else:
         # Fallback registration if in synthetic mode
@@ -120,11 +127,11 @@ def capture_best_face(student_name, student_id, department='General', email='', 
             email=email,
             photo_path=output_path
         )
-        print(f"[✓] Student {student_name} registered into database.")
+        print(f"[OK] Student {student_name} registered into database.")
         return True
 
 if __name__ == "__main__":
-    print("=== Drishti AI — Student Enrollment ===")
+    print("=== Drishti AI -- Student Enrollment ===")
     if len(sys.argv) >= 3:
         s_name = sys.argv[1].strip()
         s_id = sys.argv[2].strip()
