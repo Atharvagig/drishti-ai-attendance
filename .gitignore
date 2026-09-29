@@ -39,3 +39,12 @@ dlib-*.whl
 # OS & Cache
 .DS_Store
 Thumbs.db
+
+# Database and Data Files
+*.db
+*.sqlite
+*.sqlite3
+*.xlsx
+*.csv
+backend/data/known_faces/*.jpg
+backend/data/dataset/

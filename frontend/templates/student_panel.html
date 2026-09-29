@@ -49,22 +49,8 @@
             <button class="nav-item" onclick="switchTab('dashboard')" id="nav-dashboard">
                 <i class="ph ph-squares-four"></i><span>Dashboard</span>
             </button>
-            
-            <button class="nav-item" onclick="switchTab('students')" id="nav-students">
-                <i class="ph ph-users-three"></i><span>Student Directory</span>
-            </button>
-            
-            
-            <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics">
-                <i class="ph ph-chart-line-up"></i><span>Analytics</span>
-            </button>
-            
-            <!-- RBAC-controlled nav items (shown/hidden by JS based on permissions) -->
-            <button class="nav-item rbac-nav hidden" onclick="switchTab('users')" id="nav-users" data-permission="users.view">
-                <i class="ph ph-users-four"></i><span>User Management</span>
-            </button>
-            <button class="nav-item rbac-nav hidden" onclick="switchTab('audit')" id="nav-audit" data-permission="audit.view">
-                <i class="ph ph-shield-check"></i><span>Audit Logs</span>
+            <button class="nav-item" onclick="switchTab('myattendance')" id="nav-myattendance">
+                <i class="ph ph-user"></i><span>My Attendance</span>
             </button>
         </nav>
 
@@ -121,6 +107,17 @@
                     </button>
                 </div>
             </header>
+
+            
+            <div class="glass-panel" style="margin-bottom: 24px;">
+                <h2>DRISHTI AI <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">| Smart Attendance System</span></h2>
+                <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Camera Online</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Recognition Engine Ready</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Liveness Ready</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Database Connected</div>
+                </div>
+            </div>
 
             <!-- KPI Cards -->
             <div class="metrics-grid" id="metrics-grid">
@@ -275,121 +272,9 @@
             </div>
         </section>
 
-        <!-- ─── 3. STUDENT DIRECTORY ──────────────────────────────────────── -->
-        <section id="students" class="view-section hidden">
-            <header class="section-header">
-                <div>
-                    <h1>Student Directory</h1>
-                    <p>Enrolled student profiles and biometric enrollment status.</p>
-                </div>
-                <div class="header-actions">
-                    <div class="search-box">
-                        <i class="ph ph-magnifying-glass"></i>
-                        <input type="text" id="student-search" placeholder="Search students..."
-                               onkeyup="filterStudents()">
-                    </div>
-                    <select id="dept-filter" class="date-picker-input" onchange="filterStudents()">
-                        <option value="">All Departments</option>
-                    </select>
-                </div>
-            </header>
-
-            <div id="students-grid" class="students-grid"></div>
-
-            <!-- Student Profile Modal -->
-            <div id="student-modal" class="modal-overlay hidden">
-                <div class="modal-card glass-panel">
-                    <div class="modal-header">
-                        <h2 id="modal-student-name">Student Profile</h2>
-                        <button class="btn-icon" onclick="closeStudentModal()">
-                            <i class="ph ph-x"></i>
-                        </button>
-                    </div>
-                    <div id="modal-content" class="modal-body"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ─── 6. ANALYTICS ──────────────────────────────────────────────── -->
-        <section id="analytics" class="view-section hidden">
-            <header class="section-header">
-                <div>
-                    <h1>Attendance Analytics</h1>
-                    <p>Interactive charts, heatmaps, and data-driven insights.</p>
-                </div>
-                <div class="header-actions">
-                    <select id="analytics-range" class="date-picker-input" onchange="loadAnalytics()">
-                        <option value="7">Last 7 days</option>
-                        <option value="30" selected>Last 30 days</option>
-                        <option value="60">Last 60 days</option>
-                        <option value="90">Last 90 days</option>
-                    </select>
-                    <button class="btn-secondary" onclick="exportPDF()">
-                        <i class="ph ph-file-pdf"></i> Export Report
-                    </button>
-                </div>
-            </header>
-
-            <!-- Analytics KPI row -->
-            <div class="analytics-kpi" id="analytics-kpi"></div>
-
-            <!-- Charts row -->
-            <div class="charts-row">
-                <!-- Trend chart -->
-                <div class="glass-panel chart-card large-chart">
-                    <div class="widget-header">
-                        <h3><i class="ph ph-trend-up"></i> Attendance Trend</h3>
-                    </div>
-                    <canvas id="trend-chart" height="120"></canvas>
-                </div>
-                <!-- Department chart -->
-                <div class="glass-panel chart-card">
-                    <div class="widget-header">
-                        <h3><i class="ph ph-buildings"></i> By Department</h3>
-                    </div>
-                    <canvas id="dept-chart" height="160"></canvas>
-                </div>
-            </div>
-
-            <!-- Heatmap -->
-            <div class="glass-panel">
-                <div class="widget-header">
-                    <h3><i class="ph ph-calendar-dots"></i> Attendance Heatmap</h3>
-                    <div class="heatmap-legend">
-                        <span class="legend-item"><span class="hm-dot hm-green"></span>Present</span>
-                        <span class="legend-item"><span class="hm-dot hm-yellow"></span>Late</span>
-                        <span class="legend-item"><span class="hm-dot hm-red"></span>Absent</span>
-                        <span class="legend-item"><span class="hm-dot hm-gray"></span>No session</span>
-                    </div>
-                </div>
-                <div id="heatmap-container" class="heatmap-container"></div>
-            </div>
-
-            <!-- At-risk table -->
-            <div class="glass-panel">
-                <div class="table-toolbar">
-                    <div class="toolbar-title">
-                        <h3><i class="ph ph-warning"></i> At-Risk Students</h3>
-                        <span class="badge-count red-badge" id="risk-count">0</span>
-                    </div>
-                </div>
-                <div class="table-scroll">
-                    <table class="premium-table">
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Department</th>
-                                <th>Sessions</th>
-                                <th>Attended</th>
-                                <th>Rate</th>
-                                <th>Risk</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="risk-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- ─── MY ATTENDANCE ────────────────────────────────────────────── -->
+        <section id="myattendance" class="view-section hidden">
+            <!-- Rendered by loadMyAttendance() in app.js -->
         </section>
 
         

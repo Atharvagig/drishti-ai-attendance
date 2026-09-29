@@ -437,6 +437,38 @@ def add_student(student_id, name, department='General', email='', photo_path='',
         ''', (str(student_id), name, department, email, photo_path,
               semester, roll_number, year_of_joining))
         conn.commit()
+
+    # Auto-create user account for student access
+    try:
+        with get_db_connection() as conn:
+            c = conn.cursor()
+            c.execute('SELECT id FROM users WHERE username = ?', (str(student_id),))
+            user_exists = c.fetchone()
+            
+            dept_id = None
+            if department:
+                c.execute('SELECT id FROM departments WHERE name = ?', (department,))
+                row = c.fetchone()
+                if row: 
+                    dept_id = row['id']
+
+        if not user_exists:
+            default_pw = f"Drishti@{student_id}"
+            if len(default_pw) < 8:
+                default_pw += "12345"
+            create_user(
+                username=str(student_id),
+                password=default_pw,
+                role='student',
+                full_name=name,
+                email=email,
+                department_id=dept_id,
+                student_id=str(student_id)
+            )
+            print(f"[Database] Auto-created user account for student {student_id}")
+    except Exception as e:
+        print(f"[Database] Failed to auto-create user for student {student_id}: {e}")
+
     return True
 
 

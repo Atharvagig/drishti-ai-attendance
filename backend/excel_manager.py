@@ -65,7 +65,11 @@ def _append_and_format_excel(filepath, row_dict):
 
     new_entry_df = pd.DataFrame([row_dict])
     df = pd.concat([df, new_entry_df], ignore_index=True)
-    df.to_excel(filepath, index=False)
+    try:
+        df.to_excel(filepath, index=False)
+    except PermissionError:
+        print(f"[Excel Sync] Error: Cannot write to {filepath}. It might be open in another program.")
+        return
 
     # Apply openpyxl professional formatting
     apply_openpyxl_styles(filepath)
@@ -128,7 +132,10 @@ def apply_openpyxl_styles(filepath):
         col_letter = get_column_letter(col[0].column)
         ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
 
-    wb.save(filepath)
+    try:
+        wb.save(filepath)
+    except PermissionError:
+        print(f"[Excel Sync] Error: Cannot save formatting to {filepath}. It might be open in another program.")
 
 if __name__ == '__main__':
     sync_attendance_to_excel('1001', 'Atharva Tripathi', 'Artificial Intelligence', confidence=99.2, email_sent=1)

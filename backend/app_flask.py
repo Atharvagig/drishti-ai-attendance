@@ -260,6 +260,7 @@ def auth_me():
             'role': role,
             'permissions': permissions,
             'department_id': session.get('department_id'),
+            'student_id': session.get('student_id'),
         },
     })
 

@@ -1,125 +1,84 @@
-# 👁️ Drishti AI — Smart Attendance & Biometric Recognition System
+# 👁️ Drishti AI — Smart Face Recognition Attendance System
 
-> **Drishti AI** is a production-grade, real-time facial recognition attendance system featuring **dlib 128-D facial embeddings**, **Laplacian sharpness face selection**, **dual SQLite database & real-time Excel (.xlsx) synchronization**, and a modern **glassmorphic Web Dashboard**.
+> **B.Tech Minor Project Submission**
+> **Drishti AI** is a real-time facial recognition attendance system featuring **dlib 128-D facial embeddings**, **MediaPipe liveness detection (anti-spoofing)**, **SQLite database & real-time WebSocket dashboard synchronization**, and a modern **glassmorphic UI**.
 
 ---
 
-## ✨ Features
+## ✨ Core Features
 
 - **⚡ High-Precision Face Recognition**: Uses `face_recognition` (dlib 128-D encodings) with confidence scoring.
-- **📸 Smart Sharpness Enrollment**: Automatically selects the crispest photo frame using Laplacian variance during enrollment.
-- **📊 Real-Time Excel (.xlsx) Synchronization**: Appends attendance logs dynamically to formatted Excel spreadsheets (`Attendance_Master.xlsx` and `Attendance_YYYY-MM-DD.xlsx`).
-- **🎨 openpyxl Professional Formatting**: Styled header rows, dark slate fills, status badges, column width auto-fitting, and timestamp formatting.
-- **🗄️ SQLite Database Persistence**: Robust storage for student directory profiles and log history with complete REST API support.
-- **📧 Automated Email Alerts**: Asynchronously dispatches SMTP email alerts upon successful check-in.
-- **🛡️ Intelligent Cooldown System**: Prevents duplicate attendance logging within a 30-second window.
-- **💻 Modern Glassmorphic Web Dashboard**: Real-time analytics cards, student directory management, date range filters, client-side table search, and single-click Excel export.
+- **🛡️ Liveness Detection**: Uses MediaPipe Face Mesh to detect blinks (EAR) and head movement to prevent spoofing with photos.
+- **📊 Real-Time Dashboard**: WebSocket (Socket.IO) integration for instant attendance updates and dynamic analytics charts.
+- **🗄️ SQLite Database Persistence**: Robust local storage with RBAC (Role-Based Access Control) for Admin, Faculty, and Student panels.
+- **📈 Advanced Analytics**: Heatmaps, attendance trends, and at-risk student monitoring.
+- **📤 Export Engine**: Single-click PDF, CSV, and Excel exports with professional formatting.
+- **🚫 Duplicate Prevention**: Intelligent session-based cooldown prevents duplicate attendance logs.
 
 ---
 
-## 🏗️ System Architecture
-
-```
-Drishti AI Application Architecture
-│
-├── 🌐 Web UI (Flask Server)
-│   ├── /                 → Dashboard UI (SPA)
-│   ├── /auth             → Authentication & Session Management
-│   ├── /api/stats        → Analytics Metrics & Log Data
-│   ├── /api/students     → Student Directory Management
-│   ├── /api/attendance   → Attendance Log Queries
-│   ├── /api/export       → Styled Excel Download (.xlsx)
-│   ├── /api/register     → Student Enrollment Dispatcher
-│   ├── /api/users        → User Management & RBAC API
-│   └── /api/audit-logs   → System Audit Trail API
-│
-├── ⚙️ Core Engines
-│   ├── rbac.py           → Role-Based Access Control logic & decorators
-│   ├── capture_faces.py  → Camera enrollment & Laplacian sharpness scorer
-│   ├── recognize_faces.py→ Live webcam tracking & dlib 128-D matcher
-│   ├── database.py       → SQLite ORM context manager & migrations (attendance.db)
-│   └── excel_manager.py  → Real-time openpyxl spreadsheet formatting
-│
-└── 📁 Data Persistence
-    ├── attendance.db           → SQLite Database File
-    ├── Attendance_Master.xlsx  → Historical Master Spreadsheet
-    ├── Attendance_YYYY-MM-DD.xlsx → Daily Attendance Sheets
-    └── known_faces/            → Reference Face Images (Name_ID.jpg)
-```
-
-### 🔐 Role-Based Access Control (RBAC)
-Drishti AI implements a hierarchical RBAC system out-of-the-box:
-- **`super_admin`**: Full system control (can manage users, assign roles, view audit logs).
-- **`department_head`**: Can view students and attendance records within their assigned department.
-- **`faculty`**: Can manage sessions and mark manual overrides for assigned classes.
-- **`attendance_operator`**: Can start/stop the live camera tracking.
-- **`student`**: View-only access restricted to their own attendance records.
-
----
-
-## 🚀 Getting Started
+## 🚀 Installation & Setup (College Demo Guide)
 
 ### 1. Prerequisites
-- Python 3.10+
-- Webcam / Integrated Camera
-- Virtual Environment (recommended)
+- **Python 3.10+** (Tested on Python 3.10)
+- Webcam (Internal or USB)
+- Windows OS (recommended for demo)
 
-### 2. Installation
+### 2. Install Dependencies
 
 ```bash
-# Clone repository
-git clone https://github.com/your-username/drishti-ai.git
-cd drishti-ai
+# Clone the project directory (or extract ZIP)
+cd drishti-ai-attendance
 
-# Activate Virtual Environment
-.\venv\Scripts\activate  # Windows
-source venv/bin/activate # Linux/Mac
+# Create and activate Virtual Environment (Optional but recommended)
+python -m venv venv
+.\venv\Scripts\activate
 
-# Install dependencies
+# Install required Python packages
 pip install -r requirements.txt
 ```
 
-### 3. Environment Setup
+### 3. Database Initialization & Demo Data
 
-Create a `.env` file in the root directory (refer to `.env.example`):
-
-```env
-FLASK_ENV=development
-FLASK_PORT=5000
-
-# Optional SMTP Email Alerts
-SENDER_EMAIL=your_email@gmail.com
-SENDER_PASSWORD=your_app_password
-RECEIVER_EMAIL=admin_email@gmail.com
-```
-
-### 4. Running the Web Application
+To demonstrate the dashboard analytics immediately without enrolling 30 students manually, you can generate synthetic demo data. 
+**Note:** This uses actual SQL inserts and integrates perfectly with the analytics engine.
 
 ```bash
-python app_flask.py
+# Initialize DB and seed demo data
+python backend/seed_demo.py
 ```
 
-Open your browser and navigate to: **`http://127.0.0.1:5000`**
+### 4. Running the Application
+
+To start the application, use the main entry point:
+
+```bash
+python run.py
+```
+
+### 5. Accessing the System
+
+Open your web browser and navigate to: **`http://127.0.0.1:5000`**
+
+**Default Demo Accounts:**
+- **Admin**: `admin` / `admin123` (Access to all panels, User Management)
+- **Faculty**: `faculty` / `faculty123` (Manage sessions, view students)
+- **Student**: `student` / `student123` (View own attendance only)
 
 ---
 
-## 📡 REST API Documentation
+## 📸 Demo Procedure
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `GET /` | `GET` | Renders Web Dashboard |
-| `GET /api/stats` | `GET` | Returns summary metrics & today's logs |
-| `GET /api/students` | `GET` | Lists all registered students |
-| `POST /api/students/delete` | `POST` | Removes student record & reference photo |
-| `GET /api/attendance` | `GET` | Queries attendance logs (`?date=YYYY-MM-DD`) |
-| `DELETE /api/attendance/<id>` | `DELETE` | Deletes attendance record |
-| `GET /api/export` | `GET` | Downloads styled `.xlsx` Excel sheet |
-| `POST /api/register` | `POST` | Enrolls student & launches capture tool |
-| `POST /api/start_attendance` | `POST` | Launches live camera tracking engine |
+1. **Login as Admin (`admin` / `admin123`)**.
+2. Go to **Dashboard** to show real-time metrics and historical data (seeded via `seed_demo.py`).
+3. Go to **Enroll Student**, type a sample name, and complete the 5-angle face enrollment.
+4. Go to **Sessions** and create a new session for today.
+5. Go to **Live Tracking** and click **Start Camera Tracking**.
+6. Face the camera — observe Liveness Verification (blink/move head) and Identity Match.
+7. Switch back to **Dashboard** to see the live feed update.
+8. Go to **Analytics** and export the daily report as PDF/Excel.
 
 ---
 
-## 👨‍💻 Developer & License
-
-Developed with ❤️ by **Atharva Tripathi**  
-Licensed under the **MIT License**.
+## 👨‍💻 Developer
+Developed for B.Tech Minor Project by **Atharva Tripathi**

@@ -21,9 +21,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.userPermissions = auth.user.permissions || [];
     window.userRole = auth.user.role;
     window.userId = auth.user.id;
-    
+    window.studentId = auth.user.student_id;
+
     document.getElementById('sidebar-username').textContent = auth.user.full_name || auth.user.username;
-    
+
     const roleBadge = document.getElementById('sidebar-role-badge');
     if (roleBadge) {
         roleBadge.textContent = auth.user.role.replace('_', ' ');
@@ -73,6 +74,7 @@ function switchTab(tabId) {
     if (tabId === 'analytics') loadAnalytics();
     if (tabId === 'cameras') fetchCameras();
     if (tabId === 'attendance') loadLiveTrackingTab();
+    if (tabId === 'myattendance') loadMyAttendance();
     if (tabId === 'users') fetchUsers();
     if (tabId === 'audit') fetchAuditLogs();
 }
@@ -131,7 +133,7 @@ function initSocketIO() {
     socket.on('attendance_marked', (data) => {
         // Add to activity feed on dashboard
         addActivityFeedItem(data);
-        
+
         // Add to live tracking if active
         if (!document.getElementById('attendance').classList.contains('hidden')) {
             addRecognitionEvent(data);
@@ -152,7 +154,7 @@ function initSocketIO() {
         document.getElementById('cam-recognized').textContent = stats.recognized;
         document.getElementById('cam-unknown').textContent = stats.unknown;
         document.getElementById('cam-liveness').textContent = stats.liveness_passed;
-        
+
         const dot = document.getElementById('cam-status-dot');
         const txt = document.getElementById('cam-status-text');
         if (stats.fps > 0) {
@@ -175,7 +177,7 @@ function initSocketIO() {
         showToast('Session Ended', `${data.present}/${data.total} attended.`, 'success');
         if (!document.getElementById('dashboard').classList.contains('hidden')) fetchStats();
         if (!document.getElementById('sessions').classList.contains('hidden')) loadSessionsTab();
-        
+
         // Reset tracking UI if it was this session
         if (currentSessionId == data.session_id) {
             stopTrackingUI();
@@ -200,7 +202,7 @@ function getCookie(name) {
 async function fetchAPI(endpoint, options = {}) {
     try {
         if (!options.headers) options.headers = {};
-        
+
         // Add CSRF token for mutations
         if (options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
             const csrfToken = getCookie('csrf_token');
@@ -229,7 +231,7 @@ function showToast(title, message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     let icon = 'ph-info';
     if (type === 'success') icon = 'ph-check-circle toast-success-icon';
     if (type === 'error') icon = 'ph-x-circle toast-error-icon';
@@ -242,7 +244,7 @@ function showToast(title, message, type = 'info') {
             <p style="margin:0; font-size:12px; opacity:0.8">${message}</p>
         </div>
     `;
-    
+
     container.appendChild(toast);
     setTimeout(() => {
         toast.style.animation = 'slideInRight 0.3s ease reverse forwards';
@@ -258,21 +260,21 @@ async function fetchStats() {
     updateStatsUI(data);
     renderAttendanceTable(data.attendance);
     renderTodaySessions(data.today_sessions);
-    
+
     // Notifications count
     updateNotifBadge(data.unread_notifications);
 }
 
 function updateStatsUI(stats) {
     document.querySelectorAll('.skeleton-card').forEach(el => el.classList.remove('skeleton-card'));
-    
+
     document.getElementById('stat-registered').textContent = stats.total_registered;
     document.getElementById('stat-present').textContent = stats.present_today;
     document.getElementById('stat-late').textContent = stats.late_today || 0;
     document.getElementById('stat-absent').textContent = stats.absent_today || 0;
     document.getElementById('stat-rate').textContent = `${stats.attendance_rate}%`;
     document.getElementById('stat-sessions').textContent = stats.active_sessions || 0;
-    
+
     const badge = document.getElementById('active-sessions-badge');
     if (stats.active_sessions > 0) {
         badge.textContent = stats.active_sessions;
@@ -288,7 +290,7 @@ async function fetchInsights() {
 
     const list = document.getElementById('insights-list');
     list.innerHTML = '';
-    
+
     data.insights.forEach(insight => {
         const div = document.createElement('div');
         div.className = `insight-card ${insight.type}`;
@@ -305,14 +307,14 @@ function addActivityFeedItem(event) {
     // Remove empty state
     const empty = feed.querySelector('.empty-state-sm');
     if (empty) empty.remove();
-    
+
     const div = document.createElement('div');
     div.className = 'activity-item';
-    
+
     let iconClass = 'ph-check';
     let iconBg = 'rgba(16,185,129,0.1)';
     let iconCol = 'var(--emerald)';
-    
+
     if (event.status === 'Late') {
         iconClass = 'ph-clock';
         iconBg = 'rgba(245,158,11,0.1)';
@@ -329,7 +331,7 @@ function addActivityFeedItem(event) {
         </div>
         <div class="activity-time">${event.time}</div>
     `;
-    
+
     feed.prepend(div);
     if (feed.children.length > 20) feed.lastChild.remove();
 }
@@ -338,7 +340,7 @@ function addAnomalyAlert(anomaly) {
     const list = document.getElementById('anomaly-list');
     const empty = list.querySelector('.empty-state-sm');
     if (empty) empty.remove();
-    
+
     const div = document.createElement('div');
     div.className = `anomaly-item ${anomaly.severity}`;
     div.innerHTML = `
@@ -346,9 +348,9 @@ function addAnomalyAlert(anomaly) {
         <span style="opacity:0.8">${anomaly.description}</span>
         <div style="font-size:10px; margin-top:4px; opacity:0.6">${anomaly.time}</div>
     `;
-    
+
     list.prepend(div);
-    
+
     const countEl = document.getElementById('anomaly-count');
     countEl.textContent = parseInt(countEl.textContent) + 1;
     countEl.classList.add('red-badge');
@@ -366,14 +368,14 @@ async function fetchLogsByDate() {
 function renderAttendanceTable(logs) {
     const tbody = document.getElementById('attendance-tbody');
     tbody.innerHTML = '';
-    
+
     if (!logs || logs.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px;">
             <div class="empty-state-sm"><i class="ph ph-folder-dashed"></i><p>No records found</p></div>
         </td></tr>`;
         return;
     }
-    
+
     logs.forEach(log => {
         let badgeClass = 'scheduled';
         if (log.status === 'Present') badgeClass = 'present';
@@ -404,7 +406,7 @@ function renderAttendanceTable(logs) {
 function filterLogsTable() {
     const term = document.getElementById('log-search').value.toLowerCase();
     const rows = document.getElementById('attendance-tbody').querySelectorAll('tr');
-    
+
     rows.forEach(row => {
         if (row.cells.length < 2) return;
         const text = row.cells[0].textContent.toLowerCase() + ' ' + row.cells[1].textContent.toLowerCase();
@@ -423,12 +425,12 @@ async function loadSessionsTab() {
 function renderTodaySessions(sessions) {
     const list = document.getElementById('today-sessions-list');
     list.innerHTML = '';
-    
+
     if (!sessions || sessions.length === 0) {
         list.innerHTML = `<div class="empty-state-sm"><i class="ph ph-calendar-slash"></i><p>No sessions scheduled today</p></div>`;
         return;
     }
-    
+
     sessions.forEach(s => {
         const div = document.createElement('div');
         div.className = 'session-card';
@@ -471,7 +473,7 @@ function renderSessionsGrid(sessions) {
 
         const div = document.createElement('div');
         div.className = 'session-card glass-panel';
-        
+
         let actionBtn = '';
         if (s.status === 'scheduled') {
             actionBtn = `<button class="btn-primary" onclick="startSession(${s.id})"><i class="ph ph-play"></i> Start</button>`;
@@ -522,11 +524,11 @@ async function handleCreateSession(e) {
 
     const res = await fetch('/api/sessions', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
     const data = await res.json();
-    
+
     if (data.success) {
         showToast('Success', 'Session created successfully', 'success');
         closeSessionModal();
@@ -575,7 +577,7 @@ async function fetchStudents() {
         depts.forEach(d => {
             sel.innerHTML += `<option value="${d}">${d}</option>`;
         });
-        
+
         window._allStudents = data.students;
         renderStudentsGrid(data.students);
     }
@@ -584,15 +586,15 @@ async function fetchStudents() {
 function renderStudentsGrid(students) {
     const grid = document.getElementById('students-grid');
     grid.innerHTML = '';
-    
+
     students.forEach(s => {
         const div = document.createElement('div');
         div.className = 'student-card';
         div.onclick = () => openStudentModal(s.student_id);
-        
+
         // Initial fallback
         let avatarStr = s.name.charAt(0);
-        
+
         div.innerHTML = `
             <div class="student-avatar">${avatarStr}</div>
             <div class="student-info">
@@ -609,36 +611,36 @@ function renderStudentsGrid(students) {
 function filterStudents() {
     const term = document.getElementById('student-search').value.toLowerCase();
     const dept = document.getElementById('dept-filter').value;
-    
+
     if (!window._allStudents) return;
-    
+
     const filtered = window._allStudents.filter(s => {
         const matchName = s.name.toLowerCase().includes(term) || s.student_id.toLowerCase().includes(term);
         const matchDept = dept === '' || s.department === dept;
         return matchName && matchDept;
     });
-    
+
     renderStudentsGrid(filtered);
 }
 
-async function openStudentModal(sid) {
-    const modal = document.getElementById('student-modal');
-    const content = document.getElementById('modal-content');
+async function loadMyAttendance() {
+    if (!window.studentId) {
+        document.getElementById('myattendance').innerHTML = '<div class="empty-state-sm"><i class="ph ph-warning-circle"></i><p>No student ID linked to this account.</p></div>';
+        return;
+    }
+    const content = document.getElementById('myattendance');
     content.innerHTML = '<div class="empty-state-sm"><i class="ph ph-spinner-gap"></i><p>Loading...</p></div>';
-    modal.classList.remove('hidden');
-    
-    const data = await fetchAPI(`/api/students/${sid}/analytics`);
+
+    const data = await fetchAPI(`/api/students/${window.studentId}/analytics`);
     if (!data || !data.success) {
         content.innerHTML = '<p class="text-danger">Failed to load student data.</p>';
         return;
     }
-    
-    document.getElementById('modal-student-name').textContent = data.student.name;
-    
+
     let riskColor = 'var(--emerald)';
     if (data.risk === 'MEDIUM') riskColor = 'var(--amber)';
     if (data.risk === 'HIGH') riskColor = 'var(--rose)';
-    
+
     let historyHtml = '';
     data.history.forEach(h => {
         historyHtml += `
@@ -649,7 +651,77 @@ async function openStudentModal(sid) {
             </tr>
         `;
     });
-    
+
+    content.innerHTML = `
+        <header class="section-header">
+            <div>
+                <h1>My Attendance Profile</h1>
+                <p>${data.student.name} | ${data.student.student_id} | ${data.student.department} (Sem ${data.student.semester})</p>
+            </div>
+        </header>
+
+        <div class="analytics-kpi" style="grid-template-columns: repeat(3, 1fr); margin-top:24px;">
+            <div class="metric-card glass-panel" style="padding:20px; flex-direction:column; align-items:flex-start; gap:12px;">
+                <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Attendance Rate</p>
+                <h3 style="font-size:32px; color:${riskColor}">${data.attendance_rate}%</h3>
+            </div>
+            <div class="metric-card glass-panel" style="padding:20px; flex-direction:column; align-items:flex-start; gap:12px;">
+                <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Risk Level</p>
+                <h3 style="font-size:24px; color:${riskColor}">${data.risk}</h3>
+            </div>
+            <div class="metric-card glass-panel" style="padding:20px; flex-direction:column; align-items:flex-start; gap:12px;">
+                <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Biometric Status</p>
+                <h3 style="font-size:24px;">${data.embeddings_stored > 0 ? '<span class="badge active"><i class="ph ph-check-circle"></i> Enrolled</span>' : '<span class="badge missed"><i class="ph ph-warning"></i> Not Enrolled</span>'}</h3>
+            </div>
+        </div>
+        
+        <h3 style="margin:32px 0 16px;">Recent Attendance History</h3>
+        <div class="table-container glass-panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Session / Subject</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${historyHtml || '<tr><td colspan="3" style="text-align:center">No attendance records found</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function openStudentModal(sid) {
+    const modal = document.getElementById('student-modal');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = '<div class="empty-state-sm"><i class="ph ph-spinner-gap"></i><p>Loading...</p></div>';
+    modal.classList.remove('hidden');
+
+    const data = await fetchAPI(`/api/students/${sid}/analytics`);
+    if (!data || !data.success) {
+        content.innerHTML = '<p class="text-danger">Failed to load student data.</p>';
+        return;
+    }
+
+    document.getElementById('modal-student-name').textContent = data.student.name;
+
+    let riskColor = 'var(--emerald)';
+    if (data.risk === 'MEDIUM') riskColor = 'var(--amber)';
+    if (data.risk === 'HIGH') riskColor = 'var(--rose)';
+
+    let historyHtml = '';
+    data.history.forEach(h => {
+        historyHtml += `
+            <tr>
+                <td>${h.date}</td>
+                <td>${h.subject_name || 'Global'}</td>
+                <td><span class="badge ${h.status.toLowerCase()}">${h.status}</span></td>
+            </tr>
+        `;
+    });
+
     content.innerHTML = `
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
             <div>
@@ -696,11 +768,11 @@ function closeStudentModal() { document.getElementById('student-modal').classLis
 
 async function deleteStudent(sid) {
     if (!confirm('Are you sure? This will delete the student, all their biometric data, and attendance records.')) return;
-    
+
     const res = await fetch('/api/students/delete', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({student_id: sid})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: sid })
     });
     const data = await res.json();
     if (data.success) {
@@ -716,7 +788,7 @@ async function handleRegister(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-register');
     const btnText = document.getElementById('btn-register-text');
-    
+
     const payload = {
         name: document.getElementById('student-name').value,
         sid: document.getElementById('student-id').value,
@@ -724,29 +796,29 @@ async function handleRegister(e) {
         semester: document.getElementById('student-sem').value,
         email: document.getElementById('student-email').value,
     };
-    
+
     if (!document.getElementById('consent-check').checked) {
         showToast('Error', 'Consent is required', 'error');
         return;
     }
-    
+
     btn.disabled = true;
     btnText.textContent = 'Camera Window Opened...';
-    
+
     // Reset steps UI
     document.querySelectorAll('.step-item').forEach(el => {
         el.classList.remove('done'); el.classList.remove('active');
     });
     document.getElementById('step-2').classList.add('active');
-    
+
     try {
         const res = await fetch('/api/register', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        
+
         if (data.success) {
             document.querySelectorAll('.step-item').forEach(el => el.classList.add('done'));
             showToast('Success', data.message, 'success');
@@ -782,14 +854,14 @@ async function loadLiveTrackingTab() {
 
 async function startAttendance() {
     const sessId = document.getElementById('session-select').value;
-    
+
     document.getElementById('btn-start-attendance').disabled = true;
-    
+
     let url = '/api/start_attendance'; // legacy global mode
     if (sessId) {
         url = `/api/sessions/${sessId}/start`; // session-bound mode
     }
-    
+
     const data = await fetchAPI(url, { method: 'POST' });
     if (data && data.success) {
         startTrackingUI();
@@ -802,7 +874,7 @@ async function startAttendance() {
 function startTrackingUI() {
     document.getElementById('camera-offline').classList.add('hidden');
     document.getElementById('camera-live').classList.remove('hidden');
-    
+
     // Start MJPEG stream
     const img = document.getElementById('camera-stream');
     img.src = '/api/camera/stream?' + new Date().getTime(); // cache bust
@@ -821,7 +893,7 @@ function stopTrackingUI() {
     document.getElementById('camera-live').classList.add('hidden');
     document.getElementById('btn-start-attendance').disabled = false;
     document.getElementById('camera-stream').src = '';
-    
+
     // Reset stats
     document.getElementById('cam-status-dot').className = 'status-dot offline';
     document.getElementById('cam-status-text').textContent = 'OFFLINE';
@@ -833,15 +905,15 @@ function addRecognitionEvent(data) {
     const list = document.getElementById('recognition-events');
     const empty = list.querySelector('.empty-state-sm');
     if (empty) empty.remove();
-    
+
     const div = document.createElement('div');
-    
+
     let typeClass = 'success';
     if (data.status === 'Late') typeClass = 'warning';
     if (data.name === 'Unknown') typeClass = 'error';
-    
+
     div.className = `rec-event-card ${typeClass}`;
-    
+
     div.innerHTML = `
         <div class="rec-avatar">${data.name.charAt(0)}</div>
         <div class="rec-info">
@@ -853,7 +925,7 @@ function addRecognitionEvent(data) {
             <span class="time">${data.time}</span>
         </div>
     `;
-    
+
     list.prepend(div);
     if (list.children.length > 50) list.lastChild.remove();
 }
@@ -862,10 +934,10 @@ function addRecognitionEvent(data) {
 // --- Analytics ---
 async function loadAnalytics() {
     const days = document.getElementById('analytics-range').value;
-    
+
     const overview = await fetchAPI('/api/analytics/overview');
     if (!overview || !overview.success) return;
-    
+
     // KPI
     const kpi = document.getElementById('analytics-kpi');
     kpi.innerHTML = `
@@ -886,17 +958,17 @@ async function loadAnalytics() {
             <h3 style="font-size:24px; color:var(--rose)">${overview.stats.at_risk_count}</h3>
         </div>
     `;
-    
+
     // Draw Charts
     drawTrendChart(overview.trends);
     drawDeptChart(overview.department_stats);
-    
+
     // Draw Heatmap
     const heatmapRes = await fetchAPI('/api/analytics/heatmap?months=3');
     if (heatmapRes && heatmapRes.success) {
         drawHeatmap(heatmapRes.heatmap);
     }
-    
+
     // Risk Table
     const rtbody = document.getElementById('risk-tbody');
     rtbody.innerHTML = '';
@@ -922,12 +994,12 @@ async function loadAnalytics() {
 function drawTrendChart(data) {
     if (charts.trend) charts.trend.destroy();
     const ctx = document.getElementById('trend-chart').getContext('2d');
-    
+
     const labels = data.map(d => d.date.split('-').slice(1).join('/'));
     const vals = data.map(d => {
         return d.total_marked > 0 ? (d.attended / d.total_marked * 100).toFixed(1) : 0;
     });
-    
+
     charts.trend = new Chart(ctx, {
         type: 'line',
         data: {
@@ -957,10 +1029,10 @@ function drawTrendChart(data) {
 function drawDeptChart(data) {
     if (charts.dept) charts.dept.destroy();
     const ctx = document.getElementById('dept-chart').getContext('2d');
-    
+
     const labels = data.map(d => d.department.substring(0, 15));
     const vals = data.map(d => d.rate);
-    
+
     charts.dept = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -987,23 +1059,23 @@ function drawDeptChart(data) {
 function drawHeatmap(data) {
     const container = document.getElementById('heatmap-container');
     container.innerHTML = '';
-    
+
     // Fill 90 days grid
     const today = new Date();
     const days = 90;
-    
+
     const dataMap = {};
     data.forEach(d => { dataMap[d.date] = d.rate; });
-    
+
     for (let i = days; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
         const dStr = d.toISOString().split('T')[0];
-        
+
         const cell = document.createElement('div');
         cell.className = 'hm-cell';
         cell.title = dStr;
-        
+
         if (dataMap[dStr] !== undefined) {
             const r = dataMap[dStr];
             cell.title += `: ${r}%`;
@@ -1081,18 +1153,18 @@ async function submitOverride() {
     const id = document.getElementById('override-record-id').value;
     const status = document.getElementById('override-status').value;
     const reason = document.getElementById('override-reason').value;
-    
+
     if (!reason) {
         showToast('Error', 'Reason is required for audit trail', 'warning');
         return;
     }
-    
+
     const data = await fetchAPI(`/api/attendance/${id}/override`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, reason })
     });
-    
+
     if (data && data.success) {
         showToast('Success', 'Attendance overridden', 'success');
         closeOverrideModal();
@@ -1108,15 +1180,15 @@ async function fetchNotifications() {
     const data = await fetchAPI('/api/notifications');
     if (data && data.success) {
         updateNotifBadge(data.unread);
-        
+
         const list = document.getElementById('notif-list');
         list.innerHTML = '';
-        
+
         if (data.notifications.length === 0) {
             list.innerHTML = `<div class="empty-state-sm"><i class="ph ph-bell-slash"></i><p>No notifications</p></div>`;
             return;
         }
-        
+
         data.notifications.forEach(n => {
             const div = document.createElement('div');
             div.className = `notif-item ${n.type} ${n.read ? '' : 'unread'}`;
@@ -1150,7 +1222,7 @@ function toggleNotifPanel() {
 async function markRead(id, el) {
     await fetchAPI(`/api/notifications/${id}/read`, { method: 'POST' });
     el.classList.remove('unread');
-    
+
     const badge = document.getElementById('notif-count');
     let cnt = parseInt(badge.textContent) || 0;
     cnt = Math.max(0, cnt - 1);
@@ -1188,12 +1260,12 @@ function loadDropdowns() {
     // Populate session departments and classrooms statically for UI speed
     const depts = ['Artificial Intelligence & Data Science', 'Computer Science & Engineering', 'Information Technology', 'Electronics', 'Mechanical', 'General'];
     const rooms = ['LAB-101', 'LAB-102', 'LAB-204', 'ROOM-101', 'ROOM-202', 'SEMINAR HALL'];
-    
+
     const deptSel = document.getElementById('sess-dept');
     if (deptSel && deptSel.tagName === 'SELECT') {
         depts.forEach(d => deptSel.innerHTML += `<option value="${d}">${d}</option>`);
     }
-    
+
     const userDeptSel = document.getElementById('um-dept');
     if (userDeptSel && userDeptSel.tagName === 'SELECT') {
         depts.forEach(d => userDeptSel.innerHTML += `<option value="${d}">${d}</option>`);
@@ -1226,10 +1298,10 @@ async function submitChangePassword() {
     const cnf = document.getElementById('profile-confirm-pw').value;
     if (!cur || !npw) return showToast('Error', 'Current and new passwords required', 'error');
     if (npw !== cnf) return showToast('Error', 'Passwords do not match', 'error');
-    
+
     const data = await fetchAPI('/auth/change-password', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password: cur, new_password: npw })
     });
     if (!data) return;
@@ -1251,13 +1323,13 @@ function renderUsersTable(users) {
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '';
     if (!users || users.length === 0) return;
-    
+
     users.forEach(u => {
         let statusBadge = u.is_active ? `<span class="badge present">Active</span>` : `<span class="badge absent">Disabled</span>`;
         if (u.locked_until && new Date(u.locked_until) > new Date()) {
             statusBadge = `<span class="badge late">Locked</span>`;
         }
-        
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${u.username}</strong></td>
@@ -1270,10 +1342,10 @@ function renderUsersTable(users) {
             <td>
                 <button class="btn-icon" onclick="openEditUserModal(${u.id})" title="Edit"><i class="ph ph-pencil-simple"></i></button>
                 <button class="btn-icon" onclick="openResetPwModal(${u.id}, '${u.username}')" title="Reset Password"><i class="ph ph-lock-key"></i></button>
-                ${u.is_active 
-                    ? `<button class="btn-icon text-danger" onclick="toggleUserStatus(${u.id}, false)" title="Disable"><i class="ph ph-user-minus"></i></button>`
-                    : `<button class="btn-icon text-success" onclick="toggleUserStatus(${u.id}, true)" title="Enable"><i class="ph ph-user-plus"></i></button>`
-                }
+                ${u.is_active
+                ? `<button class="btn-icon text-danger" onclick="toggleUserStatus(${u.id}, false)" title="Disable"><i class="ph ph-user-minus"></i></button>`
+                : `<button class="btn-icon text-success" onclick="toggleUserStatus(${u.id}, true)" title="Enable"><i class="ph ph-user-plus"></i></button>`
+            }
             </td>
         `;
         tbody.appendChild(tr);
@@ -1309,7 +1381,7 @@ async function openEditUserModal(id) {
     const data = await fetchAPI(`/api/users/${id}`);
     if (!data || !data.success) return;
     const u = data.user;
-    
+
     document.getElementById('user-modal-title').innerHTML = '<i class="ph ph-pencil-simple"></i> Edit User';
     document.getElementById('user-modal-submit-text').textContent = 'Save Changes';
     document.getElementById('user-modal-id').value = u.id;
@@ -1338,11 +1410,11 @@ async function submitUserForm() {
         student_id: document.getElementById('um-student-id').value || null,
         // Hacky string-to-id mapping omitted for brevity, passing null
     };
-    
+
     if (!id) {
         payload.password = document.getElementById('um-password').value;
         const data = await fetchAPI('/api/users', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         if (!data) return;
@@ -1350,7 +1422,7 @@ async function submitUserForm() {
         else showToast('Error', data.message || 'Failed to create', 'error');
     } else {
         const data = await fetchAPI(`/api/users/${id}`, {
-            method: 'PUT', headers: {'Content-Type': 'application/json'},
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         if (!data) return;
@@ -1378,7 +1450,7 @@ async function submitResetPassword() {
     const npw = document.getElementById('reset-pw-new').value;
     if (!npw) return;
     const data = await fetchAPI(`/api/users/${id}/reset-password`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_password: npw })
     });
     if (!data) return;
@@ -1392,13 +1464,13 @@ async function fetchAuditLogs() {
     const act = document.getElementById('audit-action-filter').value;
     const from = document.getElementById('audit-date-from').value;
     const to = document.getElementById('audit-date-to').value;
-    
+
     let url = '/api/audit-logs?limit=200';
     if (usr) url += `&username=${encodeURIComponent(usr)}`;
     if (act) url += `&action=${encodeURIComponent(act)}`;
     if (from) url += `&date_from=${from}`;
     if (to) url += `&date_to=${to}`;
-    
+
     const data = await fetchAPI(url);
     if (data && data.success) renderAuditTable(data.logs);
 }
