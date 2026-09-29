@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drishti AI — Login</title>
+    <meta name="description" content="Login to Drishti AI Smart Campus Attendance Platform">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --purple: #a855f7;
+            --rose: #f43f5e;
+            --emerald: #10b981;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body {
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(at 20% 20%, rgba(99,102,241,0.2) 0, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(168,85,247,0.2) 0, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(99,102,241,0.05) 0, transparent 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+        .brand-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .brand-logo {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            border-radius: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: #fff;
+            margin-bottom: 16px;
+            box-shadow: 0 0 40px var(--primary-glow);
+            animation: logo-pulse 3s ease-in-out infinite;
+        }
+        @keyframes logo-pulse {
+            0%, 100% { box-shadow: 0 0 40px var(--primary-glow); }
+            50% { box-shadow: 0 0 60px rgba(99,102,241,0.7); }
+        }
+        .brand-section h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px; font-weight: 700;
+            background: linear-gradient(135deg, #c7d2fe, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand-section p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .login-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 36px;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+        }
+        .login-card h2 {
+            font-size: 20px; font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .login-card .subtitle {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+        .input-wrap input, .input-wrap select {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 12px 14px 12px 44px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Outfit', sans-serif;
+        }
+        .input-wrap input:focus, .input-wrap select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        }
+        .input-wrap select option {
+            background: #1e293b;
+        }
+        .toggle-pw {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+            background: none;
+            border: none;
+        }
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+        .login-btn:hover {
+            box-shadow: 0 0 28px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .error-msg {
+            background: rgba(244,63,94,0.1);
+            border: 1px solid rgba(244,63,94,0.3);
+            color: var(--rose);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .error-msg.show { display: flex; }
+        .demo-hint {
+            margin-top: 20px;
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .demo-hint strong { color: var(--text-main); }
+        .cred-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+        .footer-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+        }
+        /* Floating particles */
+        .particle {
+            position: fixed;
+            width: 4px; height: 4px;
+            background: var(--primary);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float-particle linear infinite;
+        }
+        @keyframes float-particle {
+            from { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 0.4; }
+            90% { opacity: 0.2; }
+            to { transform: translateY(-100px) scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating particles -->
+    <script>
+        for (let i = 0; i < 12; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.animationDuration = (8 + Math.random() * 12) + 's';
+            p.style.animationDelay = (Math.random() * 10) + 's';
+            p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+            document.body.appendChild(p);
+        }
+    </script>
+
+    <div class="login-container">
+        <div class="brand-section">
+            <div class="brand-logo">
+                <i class="ph ph-aperture"></i>
+            </div>
+            <h1>DRISHTI AI</h1>
+            <p>Smart Campus Attendance Platform</p>
+        </div>
+
+        <div class="login-card">
+            <h2>Welcome Back</h2>
+            <p class="subtitle">Sign in to access your dashboard</p>
+
+            <div class="error-msg" id="error-msg">
+                <i class="ph ph-warning-circle"></i>
+                <span id="error-text">Invalid credentials</span>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrap">
+                        <i class="ph ph-user"></i>
+                        <input type="text" id="username" placeholder="Enter your username"
+                               required autocomplete="username" value="admin">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrap">
+                        <i class="ph ph-lock"></i>
+                        <input type="password" id="password" placeholder="Enter your password"
+                               required autocomplete="current-password" value="admin123">
+                        <button type="button" class="toggle-pw" onclick="togglePw()" id="pw-toggle">
+                            <i class="ph ph-eye" id="pw-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn" id="login-btn">
+                    <i class="ph ph-sign-in"></i>
+                    <span id="btn-text">Sign In</span>
+                </button>
+            </form>
+
+            <div class="demo-hint">
+                <strong>Demo Credentials</strong>
+                <div class="cred-row">
+                    <span>Admin: <strong>admin</strong> / <strong>admin123</strong></span>
+                    <span>Faculty: <strong>faculty</strong> / <strong>faculty123</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <p class="footer-text">© 2026 Drishti AI · Biometric data is handled securely</p>
+    </div>
+
+    <script>
+        function togglePw() {
+            const pw = document.getElementById('password');
+            const icon = document.getElementById('pw-icon');
+            if (pw.type === 'password') {
+                pw.type = 'text';
+                icon.className = 'ph ph-eye-slash';
+            } else {
+                pw.type = 'password';
+                icon.className = 'ph ph-eye';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const btnText = document.getElementById('btn-text');
+            const errorEl = document.getElementById('error-msg');
+            const errorText = document.getElementById('error-text');
+
+            errorEl.classList.remove('show');
+            btn.disabled = true;
+            btnText.textContent = 'Signing in...';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include',
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    btnText.textContent = 'Redirecting...';
+                    window.location.href = '/';
+                } else {
+                    errorText.textContent = data.error || 'Invalid credentials';
+                    errorEl.classList.add('show');
+                    btn.disabled = false;
+                    btnText.textContent = 'Sign In';
+                }
+            } catch (err) {
+                errorText.textContent = 'Cannot connect to server. Is Flask running?';
+                errorEl.classList.add('show');
+                btn.disabled = false;
+                btnText.textContent = 'Sign In';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Faculty Portal - Mark Attendance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#cfdaf1",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-fixed": "#dbe1ff",
+                      "on-surface-variant": "#444650",
+                      "surface-tint": "#435b9f",
+                      "surface": "#f9f9ff",
+                      "on-error": "#ffffff",
+                      "background": "#f9f9ff",
+                      "surface-container-highest": "#d8e3fa",
+                      "on-error-container": "#93000a",
+                      "tertiary-container": "#26292a",
+                      "primary-container": "#002366",
+                      "on-primary-fixed": "#00174a",
+                      "secondary-fixed-dim": "#e9c176",
+                      "surface-container": "#e7eeff",
+                      "on-background": "#111c2c",
+                      "secondary-container": "#fed488",
+                      "tertiary-fixed-dim": "#c5c7c8",
+                      "on-secondary": "#ffffff",
+                      "surface-variant": "#d8e3fa",
+                      "tertiary-fixed": "#e1e3e4",
+                      "inverse-primary": "#b3c5ff",
+                      "secondary": "#775a19",
+                      "on-tertiary-fixed": "#191c1d",
+                      "on-secondary-fixed": "#261900",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#121516",
+                      "on-primary": "#ffffff",
+                      "primary": "#00113a",
+                      "on-tertiary": "#ffffff",
+                      "surface-bright": "#f9f9ff",
+                      "on-secondary-fixed-variant": "#5d4201",
+                      "on-primary-container": "#758dd5",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed-variant": "#454748",
+                      "on-surface": "#111c2c",
+                      "inverse-on-surface": "#ebf1ff",
+                      "secondary-fixed": "#ffdea5",
+                      "outline": "#757682",
+                      "primary-fixed-dim": "#b3c5ff",
+                      "on-tertiary-container": "#8e9091",
+                      "on-secondary-container": "#785a1a",
+                      "surface-container-high": "#dee8ff",
+                      "surface-container-low": "#f0f3ff",
+                      "on-primary-fixed-variant": "#2a4386",
+                      "outline-variant": "#c5c6d2",
+                      "inverse-surface": "#263142"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max-width": "1280px",
+                      "gutter": "24px",
+                      "margin-mobile": "16px",
+                      "stack-lg": "24px",
+                      "stack-md": "12px",
+                      "base": "8px",
+                      "margin-desktop": "32px",
+                      "stack-sm": "4px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "tabular-nums": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "tabular-nums": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body { background-color: #f9f9ff; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .table-row-hover:hover {
+            background-color: #F8F9FA;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-surface antialiased bg-background">
+<div class="flex min-h-screen">
+<!-- SideNavBar (Web) -->
+<nav class="hidden md:flex flex-col h-screen fixed left-0 top-0 py-base w-64 bg-surface dark:bg-surface shadow-sm z-40 bg-surface-container-low dark:bg-surface-container-low">
+<div class="px-gutter mb-stack-lg flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg">
+                B
+            </div>
+<div>
+<div class="font-title-lg text-title-lg font-black text-primary dark:text-primary-fixed">BBDU Admin</div>
+<div class="font-label-md text-label-md text-on-surface-variant">Academic Portal</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto px-2">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-container text-on-primary-container font-semibold rounded-lg mx-2 scale-95 duration-150 shadow-sm group" href="#">
+<span class="material-symbols-outlined icon-fill">how_to_reg</span>
+<span class="font-label-md text-label-md">Mark Attendance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">inventory</span>
+<span class="font-label-md text-label-md">Class Records</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">domain</span>
+<span class="font-label-md text-label-md">Department Stats</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">assessment</span>
+<span class="font-label-md text-label-md">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">settings</span>
+<span class="font-label-md text-label-md">System Settings</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-1 px-2 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface mx-2 hover:bg-surface-container-highest dark:hover:bg-surface-container-highest rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">contact_support</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-error hover:bg-error-container rounded-lg mx-2 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:icon-fill transition-all">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-16 sticky top-0 z-30 bg-surface-container-lowest dark:bg-surface-container-lowest border-b border-outline-variant dark:border-outline-variant">
+<div class="flex items-center gap-4">
+<button class="md:hidden p-2 text-on-surface-variant hover:bg-surface-container rounded-full">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">BBDU Attendance</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all" placeholder="Search students..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-primary dark:text-primary-fixed hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors rounded-full relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-primary dark:text-primary-fixed hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors rounded-full">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm ml-2 cursor-pointer shadow-sm">
+                        FP
+                    </div>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop max-w-[1280px] w-full mx-auto flex flex-col gap-stack-lg">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-background mb-1">Mark Attendance</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Wednesday, Oct 25, 2023 • Fall Semester</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                        Change Date
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Classes & Summary -->
+<div class="lg:col-span-4 flex flex-col gap-stack-lg">
+<!-- My Classes Section -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_12px_rgba(0,35,102,0.05)] overflow-hidden border border-outline-variant/30 relative">
+<!-- Top Accent Bar -->
+<div class="h-1 w-full bg-secondary-container absolute top-0 left-0"></div>
+<div class="p-4 border-b border-outline-variant/50">
+<h3 class="font-title-lg text-title-lg text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">schedule</span>
+                                Today's Schedule
+                            </h3>
+</div>
+<div class="flex flex-col">
+<!-- Active Class Card -->
+<div class="p-4 bg-primary-container/5 border-l-4 border-primary cursor-pointer transition-colors relative">
+<div class="flex justify-between items-start mb-2">
+<div class="font-label-md text-label-md text-primary font-bold bg-primary-container text-on-primary-container px-2 py-1 rounded">09:00 AM - 10:30 AM</div>
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">CS-401: Data Structures</h4>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Room 302, Block B • Section A
+                                </p>
+</div>
+<!-- Inactive Class Card -->
+<div class="p-4 border-t border-outline-variant/50 hover:bg-surface-container/50 cursor-pointer transition-colors opacity-70">
+<div class="flex justify-between items-start mb-2">
+<div class="font-label-md text-label-md text-on-surface-variant bg-surface-container-high px-2 py-1 rounded">11:00 AM - 12:30 PM</div>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-1">CS-405: Operating Systems</h4>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Lab 2, Block A • Section C
+                                </p>
+</div>
+<!-- Inactive Class Card -->
+<div class="p-4 border-t border-outline-variant/50 hover:bg-surface-container/50 cursor-pointer transition-colors opacity-70">
+<div class="flex justify-between items-start mb-2">
+<div class="font-label-md text-label-md text-on-surface-variant bg-surface-container-high px-2 py-1 rounded">02:00 PM - 03:30 PM</div>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-1">CS-410: Database Mgmt</h4>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Room 105, Block C • Section B
+                                </p>
+</div>
+</div>
+</section>
+<!-- Attendance Summary -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_12px_rgba(0,35,102,0.05)] overflow-hidden border border-outline-variant/30 relative p-6">
+<div class="h-1 w-full bg-primary absolute top-0 left-0"></div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-4">CS-401 Summary</h3>
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-surface-container p-4 rounded-lg flex flex-col justify-center items-center">
+<span class="font-display-lg text-display-lg text-primary">60</span>
+<span class="font-label-md text-label-md text-on-surface-variant">TOTAL STUDENTS</span>
+</div>
+<div class="bg-primary/5 p-4 rounded-lg flex flex-col justify-center items-center border border-primary/10">
+<span class="font-display-lg text-display-lg text-primary">86%</span>
+<span class="font-label-md text-label-md text-on-surface-variant">ATTENDANCE RATE</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-[#10b981]"></div>
+<span class="font-body-md text-body-md text-on-surface">Present</span>
+</div>
+<span class="font-tabular-nums text-tabular-nums font-semibold text-on-surface">52</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<span class="font-body-md text-body-md text-on-surface">Absent</span>
+</div>
+<span class="font-tabular-nums text-tabular-nums font-semibold text-on-surface">8</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-secondary-container"></div>
+<span class="font-body-md text-body-md text-on-surface">Excused/Late</span>
+</div>
+<span class="font-tabular-nums text-tabular-nums font-semibold text-on-surface">0</span>
+</div>
+</div>
+<div class="mt-6 w-full bg-surface-container rounded-full h-2 overflow-hidden flex">
+<div class="bg-[#10b981] h-full" style="width: 86%"></div>
+<div class="bg-error h-full" style="width: 14%"></div>
+</div>
+</section>
+</div>
+<!-- Right Column: Student Roster -->
+<div class="lg:col-span-8 flex flex-col h-full">
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_12px_rgba(0,35,102,0.05)] border border-outline-variant/30 flex flex-col h-full overflow-hidden">
+<!-- Roster Header & Controls -->
+<div class="p-4 md:p-6 border-b border-outline-variant bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-10 sticky top-0">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Student Roster</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">CS-401 • Section A</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="pl-9 pr-3 py-1.5 bg-surface border border-outline-variant rounded-md font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all" placeholder="Find student..." type="text"/>
+</div>
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded-md font-label-md text-label-md hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap">
+                                    Mark All Present
+                                </button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="flex-1 overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[600px]">
+<thead class="bg-surface-container-lowest sticky top-0 z-0">
+<tr>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/50 w-16 text-center">Roll No</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/50">Student Name</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/50 w-24 text-center">Previous %</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/50 w-48 text-center">Action</th>
+</tr>
+</thead>
+<tbody class="bg-surface-container-lowest divide-y divide-outline-variant/20">
+<!-- Row 1 -->
+<tr class="table-row-hover transition-colors">
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface-variant text-center">001</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-sm">AS</div>
+<span class="font-body-md text-body-md text-on-surface font-medium">Aarav Sharma</span>
+</div>
+</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#10b981]/10 text-[#10b981]">92%</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center justify-center bg-surface-container-low rounded-lg p-1 w-full max-w-[160px] mx-auto border border-outline-variant/30">
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">A</button>
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md bg-[#10b981] text-white shadow-sm transition-colors">P</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="table-row-hover transition-colors">
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface-variant text-center">002</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-sm">IP</div>
+<span class="font-body-md text-body-md text-on-surface font-medium">Isha Patel</span>
+</div>
+</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-error/10 text-error">68%</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center justify-center bg-surface-container-low rounded-lg p-1 w-full max-w-[160px] mx-auto border border-outline-variant/30">
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md bg-error text-white shadow-sm transition-colors">A</button>
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">P</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="table-row-hover transition-colors">
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface-variant text-center">003</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-sm">RK</div>
+<span class="font-body-md text-body-md text-on-surface font-medium">Rohan Kumar</span>
+</div>
+</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#10b981]/10 text-[#10b981]">85%</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center justify-center bg-surface-container-low rounded-lg p-1 w-full max-w-[160px] mx-auto border border-outline-variant/30">
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">A</button>
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md bg-[#10b981] text-white shadow-sm transition-colors">P</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="table-row-hover transition-colors bg-surface/50">
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface-variant text-center">004</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-sm">NG</div>
+<span class="font-body-md text-body-md text-on-surface font-medium">Neha Gupta</span>
+</div>
+</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary-container/30 text-secondary">76%</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center justify-center bg-surface-container-low rounded-lg p-1 w-full max-w-[160px] mx-auto border border-outline-variant/30">
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">A</button>
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">P</button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="table-row-hover transition-colors bg-surface/50">
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface-variant text-center">005</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-bold text-sm">VM</div>
+<span class="font-body-md text-body-md text-on-surface font-medium">Vikram Mishra</span>
+</div>
+</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#10b981]/10 text-[#10b981]">98%</span>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center justify-center bg-surface-container-low rounded-lg p-1 w-full max-w-[160px] mx-auto border border-outline-variant/30">
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">A</button>
+<button class="flex-1 py-1 px-2 rounded-md font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">P</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Roster Footer -->
+<div class="p-4 border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between mt-auto">
+<span class="font-body-md text-body-md text-on-surface-variant">Showing 1-5 of 60 students</span>
+<div class="flex gap-2">
+<button class="px-6 py-2 border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors">Cancel</button>
+<button class="px-6 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary/90 transition-colors shadow-sm">Submit Attendance</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>
+
+<!-- BBDU Admin Dashboard -->

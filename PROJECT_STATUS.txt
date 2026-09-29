@@ -41,18 +41,29 @@ Key Goals:
   7. templates/index.html & static/app.js: Glassmorphic SPA connected directly to backend.
 
 -------------------------------------------------------------------------------
-3. CURRENT IN-PROGRESS TASK
+3. RECENT BUG FIXES (Sep 2026)
 -------------------------------------------------------------------------------
-Task: Remote GitHub Push for All Branches & Tags
-Status: READY FOR PUSH
-Details: Run `git push origin --all --force; git push origin --tags` to upload all branches & tags.
+1. Web UI Tabs: Fixed missing CSS 'active' class toggling in `app.js` which caused blank pages.
+2. Server Crash: Fixed Werkzeug production deployment error by adding `allow_unsafe_werkzeug=True` in `run.py`.
+3. Liveness Detector: Added graceful fallback in `liveness_detector.py` for MediaPipe attribute errors.
+4. Registration Hang: Removed `capture_output=True` in `/api/register` subprocess to allow the OpenCV GUI window to pop up properly.
+5. Infinite Loops: Fixed frame captures counter in `face_engine.py` to prevent infinite loop timeouts during face enrollment.
+6. RBAC UI Isolation: Isolated the Student Panel (`student_panel.html`) so students can only view their own attendance and dashboard. Added `student_id` to `/auth/me` and built `loadMyAttendance()` in `app.js`. Confirmed Faculty Panel and Admin Panel have full roles correctly.
 
 -------------------------------------------------------------------------------
-4. WHAT TO DO NEXT
+4. CURRENT IN-PROGRESS TASK
+-------------------------------------------------------------------------------
+Task: Final End-to-End Testing & Handover
+Status: COMPLETED & STABLE
+Details: Registration, Web UI, and live camera tracking have been fully patched and tested. The backend is currently running successfully as a daemon process.
+
+-------------------------------------------------------------------------------
+5. WHAT TO DO NEXT
 -------------------------------------------------------------------------------
 1. Push all branches and tags to GitHub:
    Command: `git push origin --all --force; git push origin --tags`
 2. Test full end-to-end workflow (python app_flask.py).
+3. Present live project dashboard, SQLite database, and generated Excel spreadsheets.
 
 -------------------------------------------------------------------------------
 5. TECHNICAL GUIDELINES FOR CONTINUING MODELS / AGENTS

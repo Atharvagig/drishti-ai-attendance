@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drishti AI — Smart Campus Attendance Platform</title>
+    <meta name="description" content="Drishti AI — AI-powered biometric attendance and analytics for smart campuses.">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Demo Mode Banner -->
+<div id="demo-banner" class="demo-banner hidden">
+    <i class="ph ph-flask"></i>
+    DEMO MODE ACTIVE — Data shown is synthetic for demonstration purposes
+    <button onclick="document.getElementById('demo-banner').classList.add('hidden')">
+        <i class="ph ph-x"></i>
+    </button>
+</div>
+
+<div class="app-container">
+
+    <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
+    <aside class="sidebar glass-panel">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="ph ph-aperture"></i>
+            </div>
+            <div>
+                <h2>Drishti AI</h2>
+                <span class="brand-subtitle">Smart Attendance System</span>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <button class="nav-item" onclick="switchTab('dashboard')" id="nav-dashboard">
+                <i class="ph ph-squares-four"></i><span>Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('sessions')" id="nav-sessions">
+                <i class="ph ph-calendar-check"></i><span>Sessions</span>
+                <span class="nav-badge" id="active-sessions-badge" style="display:none">0</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('students')" id="nav-students">
+                <i class="ph ph-users-three"></i><span>Student Directory</span>
+            </button>
+            
+            <button class="nav-item" onclick="switchTab('attendance')" id="nav-attendance">
+                <i class="ph ph-webcam"></i><span>Live Tracking</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics">
+                <i class="ph ph-chart-line-up"></i><span>Analytics</span>
+            </button>
+            
+            <!-- RBAC-controlled nav items (shown/hidden by JS based on permissions) -->
+            <button class="nav-item rbac-nav hidden" onclick="switchTab('users')" id="nav-users" data-permission="users.view">
+                <i class="ph ph-users-four"></i><span>User Management</span>
+            </button>
+            <button class="nav-item rbac-nav hidden" onclick="switchTab('audit')" id="nav-audit" data-permission="audit.view">
+                <i class="ph ph-shield-check"></i><span>Audit Logs</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="system-status">
+                <span class="status-dot online" id="system-dot"></span>
+                <span id="system-status-text">System Active</span>
+            </div>
+            <!-- Notification Bell -->
+            <button class="notif-bell" onclick="toggleNotifPanel()" id="notif-btn">
+                <i class="ph ph-bell"></i>
+                <span class="notif-count hidden" id="notif-count">0</span>
+            </button>
+            <!-- User info + role -->
+            <div class="sidebar-user" id="sidebar-user" onclick="openProfileModal()" style="cursor:pointer;" title="View Profile">
+                <i class="ph ph-user-circle"></i>
+                <div>
+                    <span id="sidebar-username">Admin</span>
+                    <span id="sidebar-role-badge" class="role-badge">super_admin</span>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="doLogout()">
+                <i class="ph ph-sign-out"></i> Logout
+            </button>
+            <p class="copyright">Drishti AI v2.1 &middot; RBAC Edition</p>
+        </div>
+    </aside>
+
+    <!-- Notification Panel (slide-in) -->
+    <div class="notif-panel glass-panel" id="notif-panel">
+        <div class="notif-header">
+            <h3><i class="ph ph-bell"></i> Notifications</h3>
+            <button onclick="markAllRead()" class="btn-text-sm">Mark all read</button>
+        </div>
+        <div id="notif-list" class="notif-list">
+            <div class="empty-state-sm"><i class="ph ph-bell-slash"></i><p>No notifications</p></div>
+        </div>
+    </div>
+
+    <!-- ══ MAIN CONTENT ══════════════════════════════════════════════════════ -->
+    <main class="main-content">
+
+        <!-- ─── 1. DASHBOARD ──────────────────────────────────────────────── -->
+        <section id="dashboard" class="view-section active">
+            <header class="section-header">
+                <div>
+                    <h1>Real-Time Dashboard</h1>
+                    <p>Live attendance insights — auto-updates via WebSocket</p>
+                </div>
+                <div class="header-actions">
+                    <div class="date-badge" id="current-date">--</div>
+                    <button class="btn-icon" onclick="fetchStats()" title="Refresh">
+                        <i class="ph ph-arrows-clockwise"></i>
+                    </button>
+                </div>
+            </header>
+
+            
+            <div class="glass-panel" style="margin-bottom: 24px;">
+                <h2>DRISHTI AI <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">| Smart Attendance System</span></h2>
+                <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Camera Online</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Recognition Engine Ready</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Liveness Ready</div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span class="pulse-dot" style="background:var(--emerald);"></span> Database Connected</div>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="metrics-grid" id="metrics-grid">
+                <div class="metric-card glass-panel skeleton-card" id="card-registered">
+                    <div class="metric-icon blue-glow"><i class="ph ph-users-four"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-registered">—</h3>
+                        <p>Registered Students</p>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel skeleton-card" id="card-present">
+                    <div class="metric-icon green-glow"><i class="ph ph-check-circle"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-present">—</h3>
+                        <p>Present Today</p>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel skeleton-card" id="card-late">
+                    <div class="metric-icon amber-glow"><i class="ph ph-clock-countdown"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-late">—</h3>
+                        <p>Late Today</p>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel skeleton-card" id="card-absent">
+                    <div class="metric-icon red-glow"><i class="ph ph-user-minus"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-absent">—</h3>
+                        <p>Absent Today</p>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel skeleton-card" id="card-rate">
+                    <div class="metric-icon purple-glow"><i class="ph ph-chart-pie-slice"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-rate">—</h3>
+                        <p>Attendance Rate</p>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel skeleton-card" id="card-sessions">
+                    <div class="metric-icon teal-glow"><i class="ph ph-broadcast"></i></div>
+                    <div class="metric-info">
+                        <h3 id="stat-sessions">—</h3>
+                        <p>Active Sessions</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Middle Row -->
+            <div class="dashboard-row">
+                <!-- AI Insights -->
+                <div class="glass-panel dash-widget" id="insights-widget">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-brain"></i> AI Insights</h3>
+                        <button class="btn-icon" onclick="fetchInsights()" title="Refresh Insights">
+                            <i class="ph ph-arrows-clockwise"></i>
+                        </button>
+                    </div>
+                    <div id="insights-list" class="insights-list">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity (live WebSocket feed) -->
+                <div class="glass-panel dash-widget" id="activity-widget">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-activity"></i> Live Activity</h3>
+                        <span class="live-indicator"><i class="ph ph-broadcast"></i> Live</span>
+                    </div>
+                    <div id="activity-feed" class="activity-feed">
+                        <div class="empty-state-sm">
+                            <i class="ph ph-wifi-slash"></i>
+                            <p>Waiting for recognition events...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anomaly Alerts -->
+                <div class="glass-panel dash-widget" id="anomaly-widget">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-warning-diamond"></i> Anomaly Alerts</h3>
+                        <span class="badge-count" id="anomaly-count">0</span>
+                    </div>
+                    <div id="anomaly-list" class="anomaly-list">
+                        <div class="empty-state-sm"><i class="ph ph-shield-check"></i><p>No anomalies detected</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Sessions Panel -->
+            <div class="glass-panel">
+                <div class="table-toolbar">
+                    <div class="toolbar-title">
+                        <h3>Today's Sessions</h3>
+                        <span class="live-indicator"><i class="ph ph-broadcast"></i> Live Sync</span>
+                    </div>
+                    <button class="btn-secondary" onclick="switchTab('sessions')">
+                        <i class="ph ph-plus"></i> New Session
+                    </button>
+                </div>
+                <div id="today-sessions-list" class="sessions-list"></div>
+            </div>
+
+            <!-- Attendance Log Table -->
+            <div class="data-table-container glass-panel">
+                <div class="table-toolbar">
+                    <div class="toolbar-title">
+                        <h3>Attendance Logs</h3>
+                        <span class="live-indicator"><i class="ph ph-broadcast"></i> Live Sync</span>
+                    </div>
+                    <div class="toolbar-actions">
+                        <div class="search-box">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="text" id="log-search" placeholder="Search name or ID..."
+                                   onkeyup="filterLogsTable()">
+                        </div>
+                        <input type="date" id="date-filter" class="date-picker-input"
+                               onchange="fetchLogsByDate()">
+                        <button class="btn-secondary" onclick="exportExcel()" title="Export Excel">
+                            <i class="ph ph-file-xlsx"></i><span>Excel</span>
+                        </button>
+                        <button class="btn-secondary" onclick="exportCSV()" title="Export CSV">
+                            <i class="ph ph-file-csv"></i><span>CSV</span>
+                        </button>
+                        <button class="btn-secondary" onclick="exportPDF()" title="Export PDF">
+                            <i class="ph ph-file-pdf"></i><span>PDF</span>
+                        </button>
+                        <button class="btn-icon" onclick="fetchStats()" title="Refresh">
+                            <i class="ph ph-arrows-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Check-in</th>
+                                <th>Status</th>
+                                <th>Confidence</th>
+                                <th>Liveness</th>
+                                <th>Quality</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 2. SESSIONS ───────────────────────────────────────────────── -->
+        <section id="sessions" class="view-section hidden">
+            <header class="section-header">
+                <div>
+                    <h1>Attendance Sessions</h1>
+                    <p>Create, start, monitor, and lock attendance sessions.</p>
+                </div>
+                <button class="btn-primary" onclick="openSessionModal()">
+                    <i class="ph ph-plus"></i> New Session
+                </button>
+            </header>
+
+            <!-- Active Session Status -->
+            <div id="active-session-banner" class="active-session-banner hidden">
+                <div class="active-session-info">
+                    <span class="pulse-dot"></span>
+                    <strong>LIVE SESSION</strong>
+                    <span id="active-sess-name">—</span>
+                    <span id="active-sess-time" class="text-muted">—</span>
+                </div>
+                <div class="active-session-actions">
+                    <button class="btn-danger" onclick="stopCurrentSession()">
+                        <i class="ph ph-stop-circle"></i> Stop Session
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sessions Grid -->
+            <div id="sessions-grid" class="sessions-full-grid"></div>
+        </section>
+
+        <!-- ─── 3. STUDENT DIRECTORY ──────────────────────────────────────── -->
+        <section id="students" class="view-section hidden">
+            <header class="section-header">
+                <div>
+                    <h1>Student Directory</h1>
+                    <p>Enrolled student profiles and biometric enrollment status.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" id="student-search" placeholder="Search students..."
+                               onkeyup="filterStudents()">
+                    </div>
+                    <select id="dept-filter" class="date-picker-input" onchange="filterStudents()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+            </header>
+
+            <div id="students-grid" class="students-grid"></div>
+
+            <!-- Student Profile Modal -->
+            <div id="student-modal" class="modal-overlay hidden">
+                <div class="modal-card glass-panel">
+                    <div class="modal-header">
+                        <h2 id="modal-student-name">Student Profile</h2>
+                        <button class="btn-icon" onclick="closeStudentModal()">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </div>
+                    <div id="modal-content" class="modal-body"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 5. LIVE TRACKING ──────────────────────────────────────────── -->
+        <section id="attendance" class="view-section hidden">
+            <header class="section-header">
+                <div>
+                    <h1>Live Tracking Engine</h1>
+                    <p>Real-time face recognition with liveness detection and attendance rules engine.</p>
+                </div>
+                <div class="header-actions">
+                    <select id="session-select" class="date-picker-input">
+                        <option value="">— Select Session (optional) —</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Camera Stats Bar -->
+            <div class="camera-stats-bar glass-panel" id="camera-stats-bar">
+                <div class="cam-stat">
+                    <span class="cam-stat-label">CAM-01</span>
+                    <span class="status-dot offline" id="cam-status-dot"></span>
+                    <span id="cam-status-text">OFFLINE</span>
+                </div>
+                <div class="cam-stat-divider"></div>
+                <div class="cam-stat">
+                    <i class="ph ph-gauge"></i>
+                    <span id="cam-fps">0</span>
+                    <span class="cam-stat-label">FPS</span>
+                </div>
+                <div class="cam-stat">
+                    <i class="ph ph-timer"></i>
+                    <span id="cam-latency">—</span>
+                    <span class="cam-stat-label">Latency</span>
+                </div>
+                <div class="cam-stat">
+                    <i class="ph ph-users"></i>
+                    <span id="cam-faces">0</span>
+                    <span class="cam-stat-label">Faces</span>
+                </div>
+                <div class="cam-stat">
+                    <i class="ph ph-check-circle" style="color: var(--emerald)"></i>
+                    <span id="cam-recognized">0</span>
+                    <span class="cam-stat-label">Recognized</span>
+                </div>
+                <div class="cam-stat">
+                    <i class="ph ph-question-mark" style="color: var(--rose)"></i>
+                    <span id="cam-unknown">0</span>
+                    <span class="cam-stat-label">Unknown</span>
+                </div>
+                <div class="cam-stat">
+                    <i class="ph ph-shield-check" style="color: var(--emerald)"></i>
+                    <span id="cam-liveness">0</span>
+                    <span class="cam-stat-label">Live Pass</span>
+                </div>
+            </div>
+
+            <!-- Main tracking area -->
+            <div class="tracking-layout">
+                <!-- Camera launcher + optional feed -->
+                <div class="glass-panel camera-panel">
+                    <div id="camera-offline" class="camera-launcher">
+                        <div class="radar-animation">
+                            <div class="radar-circle"></div>
+                            <div class="radar-circle delay-1"></div>
+                            <i class="ph ph-scan"></i>
+                        </div>
+                        <h2>Initialize Camera Engine</h2>
+                        <p>Launches live face recognition with liveness detection (MediaPipe EAR + head pose), 128-D dlib embeddings, and real-time attendance marking.</p>
+                        <button class="btn-primary glow-btn pulse-btn" id="btn-start-attendance"
+                                onclick="startAttendance()">
+                            <i class="ph ph-rocket-launch"></i>
+                            <span>Start Camera Tracking</span>
+                        </button>
+                    </div>
+
+                    <!-- MJPEG stream (shown when active) -->
+                    <div id="camera-live" class="camera-live-feed hidden">
+                        <img id="camera-stream" src="" alt="Live camera feed" class="cam-feed">
+                        <div class="cam-overlay-badge">
+                            <span class="pulse-dot"></span> LIVE
+                        </div>
+                        <button class="btn-stop-cam" onclick="stopAttendanceSession()">
+                            <i class="ph ph-stop-circle"></i> Stop Session
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recognition events -->
+                <div class="recognition-feed glass-panel">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-identification-card"></i> Recognition Events</h3>
+                        <button class="btn-icon" onclick="document.getElementById('recognition-events').innerHTML=''">
+                            <i class="ph ph-eraser"></i>
+                        </button>
+                    </div>
+                    <div id="recognition-events" class="rec-events-list">
+                        <div class="empty-state-sm">
+                            <i class="ph ph-scan"></i>
+                            <p>Events appear here when camera is active</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 6. ANALYTICS ──────────────────────────────────────────────── -->
+        <section id="analytics" class="view-section hidden">
+            <header class="section-header">
+                <div>
+                    <h1>Attendance Analytics</h1>
+                    <p>Interactive charts, heatmaps, and data-driven insights.</p>
+                </div>
+                <div class="header-actions">
+                    <select id="analytics-range" class="date-picker-input" onchange="loadAnalytics()">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="60">Last 60 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                    <button class="btn-secondary" onclick="exportPDF()">
+                        <i class="ph ph-file-pdf"></i> Export Report
+                    </button>
+                </div>
+            </header>
+
+            <!-- Analytics KPI row -->
+            <div class="analytics-kpi" id="analytics-kpi"></div>
+
+            <!-- Charts row -->
+            <div class="charts-row">
+                <!-- Trend chart -->
+                <div class="glass-panel chart-card large-chart">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-trend-up"></i> Attendance Trend</h3>
+                    </div>
+                    <canvas id="trend-chart" height="120"></canvas>
+                </div>
+                <!-- Department chart -->
+                <div class="glass-panel chart-card">
+                    <div class="widget-header">
+                        <h3><i class="ph ph-buildings"></i> By Department</h3>
+                    </div>
+                    <canvas id="dept-chart" height="160"></canvas>
+                </div>
+            </div>
+
+            <!-- Heatmap -->
+            <div class="glass-panel">
+                <div class="widget-header">
+                    <h3><i class="ph ph-calendar-dots"></i> Attendance Heatmap</h3>
+                    <div class="heatmap-legend">
+                        <span class="legend-item"><span class="hm-dot hm-green"></span>Present</span>
+                        <span class="legend-item"><span class="hm-dot hm-yellow"></span>Late</span>
+                        <span class="legend-item"><span class="hm-dot hm-red"></span>Absent</span>
+                        <span class="legend-item"><span class="hm-dot hm-gray"></span>No session</span>
+                    </div>
+                </div>
+                <div id="heatmap-container" class="heatmap-container"></div>
+            </div>
+
+            <!-- At-risk table -->
+            <div class="glass-panel">
+                <div class="table-toolbar">
+                    <div class="toolbar-title">
+                        <h3><i class="ph ph-warning"></i> At-Risk Students</h3>
+                        <span class="badge-count red-badge" id="risk-count">0</span>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Department</th>
+                                <th>Sessions</th>
+                                <th>Attended</th>
+                                <th>Rate</th>
+                                <th>Risk</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="risk-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        
+
+        
+    </main>
+</div>
+
+<!-- ══ SESSION CREATION MODAL ════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="session-modal">
+    <div class="modal-card glass-panel" style="max-width: 560px;">
+        <div class="modal-header">
+            <h2><i class="ph ph-calendar-plus"></i> Create New Session</h2>
+            <button class="btn-icon" onclick="closeSessionModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="session-form" onsubmit="handleCreateSession(event)">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Subject Name *</label>
+                        <input type="text" id="sess-subject" placeholder="e.g. Computer Networks" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Faculty Name *</label>
+                        <input type="text" id="sess-faculty" placeholder="e.g. Dr. XYZ" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Classroom *</label>
+                        <input type="text" id="sess-classroom" placeholder="e.g. LAB-204" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Department</label>
+                        <input type="text" id="sess-dept" placeholder="e.g. AIDS">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Date *</label>
+                        <input type="date" id="sess-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Start Time *</label>
+                        <input type="time" id="sess-time" required value="16:00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Semester</label>
+                        <select id="sess-semester" class="input-select">
+                            <option value="1">1</option><option value="2">2</option>
+                            <option value="3">3</option><option value="4">4</option>
+                            <option value="5" selected>5</option><option value="6">6</option>
+                            <option value="7">7</option><option value="8">8</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Late Threshold (minutes)</label>
+                        <input type="number" id="sess-late" value="10" min="1" max="60">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Camera</label>
+                        <select id="sess-camera" class="input-select">
+                            <option value="CAM-01">CAM-01 (Default)</option>
+                            <option value="CAM-02">CAM-02</option>
+                            <option value="CAM-03">CAM-03</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeSessionModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="ph ph-calendar-check"></i> Create Session
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MANUAL OVERRIDE MODAL ════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="override-modal">
+    <div class="modal-card glass-panel" style="max-width: 420px;">
+        <div class="modal-header">
+            <h2><i class="ph ph-pencil-simple"></i> Manual Override</h2>
+            <button class="btn-icon" onclick="closeOverrideModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="override-record-id">
+            <div class="input-group">
+                <label>Current Status</label>
+                <input type="text" id="override-current" readonly class="input-readonly">
+            </div>
+            <div class="input-group">
+                <label>New Status *</label>
+                <select id="override-status" class="input-select">
+                    <option value="Present">Present</option>
+                    <option value="Late">Late</option>
+                    <option value="Absent">Absent</option>
+                    <option value="Excused">Excused</option>
+                    <option value="HalfDay">Half Day</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Reason *</label>
+                <input type="text" id="override-reason" placeholder="e.g. Face recognition failed" required>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeOverrideModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitOverride()">
+                    <i class="ph ph-check"></i> Save Override
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ ADD/EDIT USER MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="user-modal">
+    <div class="modal-card glass-panel" style="max-width:560px;">
+        <div class="modal-header">
+            <h2 id="user-modal-title"><i class="ph ph-user-plus"></i> Add User</h2>
+            <button class="btn-icon" onclick="closeUserModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="user-modal-id">
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="um-fullname" placeholder="e.g. Dr. Ananya Singh" required>
+                </div>
+                <div class="input-group">
+                    <label>Username *</label>
+                    <input type="text" id="um-username" placeholder="e.g. ananya.singh" required autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="um-email" placeholder="user@drishti.ai">
+                </div>
+                <div class="input-group">
+                    <label>Role *</label>
+                    <select id="um-role" class="input-select" required>
+                        <option value="faculty">Faculty</option>
+                        <option value="department_head">Department Head</option>
+                        <option value="attendance_operator">Attendance Operator</option>
+                        <option value="student">Student</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Department</label>
+                    <select id="um-dept" class="input-select">
+                        <option value="">— None —</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Linked Student ID (optional)</label>
+                    <input type="text" id="um-student-id" placeholder="e.g. 1240440015">
+                </div>
+            </div>
+            <div class="input-group" id="um-password-group">
+                <label>Password * (min 8 chars)</label>
+                <input type="password" id="um-password" placeholder="Set a strong password" autocomplete="new-password">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeUserModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitUserForm()">
+                    <i class="ph ph-check"></i> <span id="user-modal-submit-text">Create User</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ RESET PASSWORD MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="reset-pw-modal">
+    <div class="modal-card glass-panel" style="max-width:380px;">
+        <div class="modal-header">
+            <h2><i class="ph ph-lock-key"></i> Reset Password</h2>
+            <button class="btn-icon" onclick="closeResetPwModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="reset-pw-user-id">
+            <p id="reset-pw-username" style="color:var(--text-muted); margin-bottom:16px;"></p>
+            <div class="input-group">
+                <label>New Password * (min 8 chars)</label>
+                <input type="password" id="reset-pw-new" placeholder="New password" autocomplete="new-password">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeResetPwModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitResetPassword()">
+                    <i class="ph ph-check"></i> Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ PROFILE / CHANGE PASSWORD MODAL ══════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="profile-modal">
+    <div class="modal-card glass-panel" style="max-width:460px;">
+        <div class="modal-header">
+            <h2><i class="ph ph-user-circle"></i> My Profile</h2>
+            <button class="btn-icon" onclick="closeProfileModal()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="profile-info" style="margin-bottom:24px;"></div>
+            <hr style="border-color:var(--panel-border); margin-bottom:20px;">
+            <h4 style="margin-bottom:16px;"><i class="ph ph-lock-key"></i> Change Password</h4>
+            <div class="input-group">
+                <label>Current Password</label>
+                <input type="password" id="profile-cur-pw" placeholder="Current password">
+            </div>
+            <div class="input-group">
+                <label>New Password (min 8 chars)</label>
+                <input type="password" id="profile-new-pw" placeholder="New password">
+            </div>
+            <div class="input-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="profile-confirm-pw" placeholder="Confirm new password">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeProfileModal()">Close</button>
+                <button class="btn-primary" onclick="submitChangePassword()">
+                    <i class="ph ph-lock-key"></i> Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ ACCESS DENIED MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="access-denied-modal">
+    <div class="modal-card glass-panel" style="max-width:380px; text-align:center;">
+        <div style="padding:32px;">
+            <div style="font-size:64px; color:var(--rose); margin-bottom:16px;">
+                <i class="ph ph-shield-slash"></i>
+            </div>
+            <h2 style="margin-bottom:8px;">Access Restricted</h2>
+            <p style="color:var(--text-muted); margin-bottom:24px;">
+                You do not have permission to perform this action.
+            </p>
+            <button class="btn-secondary" onclick="closeAccessDenied()" style="width:100%;">
+                <i class="ph ph-arrow-left"></i> Go Back
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- App Script -->
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
