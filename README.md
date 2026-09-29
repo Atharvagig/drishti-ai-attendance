@@ -24,16 +24,20 @@ Drishti AI Application Architecture
 │
 ├── 🌐 Web UI (Flask Server)
 │   ├── /                 → Dashboard UI (SPA)
+│   ├── /auth             → Authentication & Session Management
 │   ├── /api/stats        → Analytics Metrics & Log Data
 │   ├── /api/students     → Student Directory Management
 │   ├── /api/attendance   → Attendance Log Queries
 │   ├── /api/export       → Styled Excel Download (.xlsx)
-│   └── /api/register     → Student Enrollment Dispatcher
+│   ├── /api/register     → Student Enrollment Dispatcher
+│   ├── /api/users        → User Management & RBAC API
+│   └── /api/audit-logs   → System Audit Trail API
 │
 ├── ⚙️ Core Engines
+│   ├── rbac.py           → Role-Based Access Control logic & decorators
 │   ├── capture_faces.py  → Camera enrollment & Laplacian sharpness scorer
 │   ├── recognize_faces.py→ Live webcam tracking & dlib 128-D matcher
-│   ├── database.py       → SQLite ORM context manager (attendance.db)
+│   ├── database.py       → SQLite ORM context manager & migrations (attendance.db)
 │   └── excel_manager.py  → Real-time openpyxl spreadsheet formatting
 │
 └── 📁 Data Persistence
@@ -42,6 +46,14 @@ Drishti AI Application Architecture
     ├── Attendance_YYYY-MM-DD.xlsx → Daily Attendance Sheets
     └── known_faces/            → Reference Face Images (Name_ID.jpg)
 ```
+
+### 🔐 Role-Based Access Control (RBAC)
+Drishti AI implements a hierarchical RBAC system out-of-the-box:
+- **`super_admin`**: Full system control (can manage users, assign roles, view audit logs).
+- **`department_head`**: Can view students and attendance records within their assigned department.
+- **`faculty`**: Can manage sessions and mark manual overrides for assigned classes.
+- **`attendance_operator`**: Can start/stop the live camera tracking.
+- **`student`**: View-only access restricted to their own attendance records.
 
 ---
 
