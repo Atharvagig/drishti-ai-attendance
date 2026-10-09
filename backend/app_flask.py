@@ -79,6 +79,9 @@ def touch_session_and_csrf():
     if session.get('user_id'):
         session.permanent = True
 
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = secrets.token_hex(32)
+
     # Exempt login route from CSRF check
     if request.endpoint in ('auth_login', 'static'):
         return
@@ -93,10 +96,9 @@ def touch_session_and_csrf():
 @app.after_request
 def set_csrf_cookie(response):
     """Set CSRF token in a cookie that JS can read to send back in header."""
-    if '_csrf_token' not in session:
-        session['_csrf_token'] = secrets.token_hex(32)
-    # httponly=False so JS can read it for the X-CSRFToken header
-    response.set_cookie('csrf_token', session['_csrf_token'], httponly=False, samesite='Lax')
+    if '_csrf_token' in session:
+        # httponly=False so JS can read it for the X-CSRFToken header
+        response.set_cookie('csrf_token', session['_csrf_token'], httponly=False, samesite='Lax', path='/')
     return response
 
 
@@ -1161,26 +1163,38 @@ def camera_stream():
     import time
 
     def generate():
-        cap, _, _ = camera_utils.get_working_camera(preferred_index=0)
-        use_synth = cap is None
-
-        while True:
-            if not use_synth and cap:
-                ret, frame = cap.read()
-                if not ret:
-                    use_synth = True
-                    frame = camera_utils.create_synthetic_frame('Camera unavailable')
-            else:
-                frame = camera_utils.create_synthetic_frame('Demo Feed — No Camera')
+        global _recognition_session
+        if _recognition_session and _recognition_session.running:
+            while True:
+                frame = _recognition_session.latest_frame
+                if frame is None:
+                    frame = camera_utils.create_synthetic_frame('Waiting for Feed')
+                frame = cv2.resize(frame, (640, 480))
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
+                       buffer.tobytes() + b'\r\n')
                 time.sleep(0.033)
+        else:
+            cap, _, _ = camera_utils.get_working_camera(preferred_index=0)
+            use_synth = cap is None
 
-            frame = cv2.resize(frame, (640, 480))
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
-                   buffer.tobytes() + b'\r\n')
+            while True:
+                if not use_synth and cap:
+                    ret, frame = cap.read()
+                    if not ret:
+                        use_synth = True
+                        frame = camera_utils.create_synthetic_frame('Camera unavailable')
+                else:
+                    frame = camera_utils.create_synthetic_frame('Demo Feed — No Camera')
+                    time.sleep(0.033)
 
-        if cap:
-            cap.release()
+                frame = cv2.resize(frame, (640, 480))
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' +
+                       buffer.tobytes() + b'\r\n')
+
+            if cap:
+                cap.release()
 
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 

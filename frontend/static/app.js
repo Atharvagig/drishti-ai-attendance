@@ -102,6 +102,18 @@ function closeAccessDenied() {
     document.getElementById('access-denied-modal').classList.add('hidden');
 }
 
+// --- Global Error Boundary ---
+window.addEventListener('error', (event) => {
+    console.error('Global Error Boundary Caught:', event.error);
+    showToast('System Error', 'An unexpected UI error occurred. Degraded gracefully.', 'error');
+    // Prevent full app crash, gracefully degrade
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled Promise Rejection:', event.reason);
+    showToast('Network Error', 'A network request failed. Please check your connection.', 'error');
+});
+
 // --- SocketIO Integration ---
 function initSocketIO() {
     socket = io();
@@ -214,16 +226,26 @@ async function fetchAPI(endpoint, options = {}) {
         const res = await fetch(endpoint, options);
         if (res.status === 401 && endpoint !== '/auth/me') {
             window.location.href = '/login';
-            return null;
+            return { success: false, error: 'Unauthorized' };
         }
         if (res.status === 403) {
-            document.getElementById('access-denied-modal').classList.remove('hidden');
-            return null;
+            document.getElementById('access-denied-modal')?.classList.remove('hidden');
+            return { success: false, error: 'Access Denied' };
+        }
+        if (!res.ok) {
+            // Graceful fallback for API 500s or 404s
+            let errMsg = 'API Error';
+            try {
+                const errData = await res.json();
+                errMsg = errData.message || errData.error || errMsg;
+            } catch (e) { }
+            console.warn(`[fetchAPI] Non-OK response from ${endpoint}:`, errMsg);
+            return { success: false, error: errMsg };
         }
         return await res.json();
     } catch (e) {
         console.error('API Error:', e);
-        return null;
+        return { success: false, error: 'Network error or server unreachable. Operating in offline/fallback mode if possible.' };
     }
 }
 
@@ -812,9 +834,13 @@ async function handleRegister(e) {
     document.getElementById('step-2').classList.add('active');
 
     try {
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = getCookie('csrf_token');
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
         const res = await fetch('/api/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(payload)
         });
         const data = await res.json();
