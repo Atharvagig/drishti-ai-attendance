@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: drishti-ai-attendance
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: DB_BACKEND
+        value: mongodb
+      - key: DATABASE_NAME
+        value: drishti_attendance
+      - key: MONGODB_URI
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_TIMEOUT_MINUTES
+        value: "60"
+      - key: MATCH_TOLERANCE
+        value: "0.45"
+      - key: COOLDOWN_SECONDS
+        value: "10"

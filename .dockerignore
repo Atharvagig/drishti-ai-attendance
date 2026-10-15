@@ -1,0 +1,38 @@
+# Virtual environments
+venv/
+venv314/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Git
+.git/
+.gitignore
+
+# Environment & secrets
+.env
+.env.*
+*.bak
+*.log
+
+# Databases and large datasets
+backend/data/*.db
+backend/data/*.db*
+backend/data/*.bak
+backend/data/dataset/
+
+# Submission & documentation artifacts not needed in image
+submission/
+*.whl
+*.zip
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
