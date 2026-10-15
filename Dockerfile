@@ -1,5 +1,36 @@
-# Drishti AI — Production Container Image
-FROM python:3.11-slim
+# ── Stage 1: Build & Dependency Resolution ─────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    CMAKE_BUILD_PARALLEL_LEVEL=1 \
+    MAKEFLAGS="-j1"
+
+# Install minimal build tools needed for Python wheel installation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libopenblas-dev \
+    liblapack-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Upgrade pip and packaging tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install prebuilt dlib binary wheel to completely bypass C++ compilation from source
+RUN pip install --no-cache-dir dlib-bin face-recognition-models Click Pillow numpy && \
+    pip install --no-cache-dir --no-deps face_recognition==1.3.0
+
+# Install remaining dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# ── Stage 2: Clean Production Runtime ───────────────────────────────────────────
+FROM python:3.11-slim AS runner
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -7,12 +38,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=5000 \
     FLASK_ENV=production
 
-# Install system dependencies for dlib compilation, BLAS acceleration, and OpenCV runtime
+# Install only runtime shared libraries (no compilers, no cmake, no dev tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    libopenblas-dev \
-    liblapack-dev \
+    libopenblas0 \
+    liblapack3 \
     libgl1 \
     libglib2.0-0 \
     curl \
@@ -20,12 +49,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Upgrade build tools
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-
-# Install dependencies (utilizes Docker layer caching)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy installed Python packages and entrypoint binaries from builder stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application source code
 COPY . .
