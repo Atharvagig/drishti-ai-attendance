@@ -4,7 +4,8 @@ Centralized permission model, Flask decorators, and data-scope helpers.
 Do NOT scatter authorization logic across routes — use these helpers.
 """
 from functools import wraps
-from flask import session, jsonify, request
+from flask import session, jsonify, request, redirect
+from urllib.parse import quote
 
 # ── Permission Definitions ────────────────────────────────────────────────────
 # All available permissions in the system. Adding a new permission only
@@ -226,16 +227,65 @@ def get_user_permissions(role: str) -> list[str]:
 
 # ── Flask Decorators ──────────────────────────────────────────────────────────
 
+def _is_html_request() -> bool:
+    """
+    Determine whether the current request is an HTML page view (browser navigation)
+    versus an API or AJAX request.
+    Page routes like /admin, /faculty, /student should redirect unauthenticated browsers to /login.
+    API endpoints like /api/... or /auth/... must always return JSON.
+    """
+    path = request.path or ''
+    if path.startswith('/api/') or path.startswith('/auth/'):
+        return False
+
+    if request.is_json:
+        return False
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return False
+
+    accept = request.accept_mimetypes
+    if not accept:
+        return True
+
+    html_score = accept['text/html']
+    json_score = accept['application/json']
+    if html_score > 0 and html_score >= json_score:
+        return True
+
+    return False
+
+
+def _unauthenticated_response():
+    """Returns either a 302 redirect to /login?next=... for HTML pages or 401 JSON for APIs."""
+    if _is_html_request():
+        target = request.full_path.rstrip('?') if request.query_string else request.path
+        if not target.startswith('/') or target.startswith('//'):
+            target = '/'
+        return redirect(f'/login?next={quote(target, safe="/?=&%")}')
+    return jsonify({
+        'success': False,
+        'error': 'authentication_required',
+        'message': 'Authentication required.',
+    }), 401
+
+
+def _unauthorized_response(message='You do not have permission to perform this action.'):
+    """Returns redirect to / for unauthorized HTML page views or 403 JSON for APIs."""
+    if _is_html_request():
+        return redirect('/')
+    return jsonify({
+        'success': False,
+        'error': 'permission_denied',
+        'message': message,
+    }), 403
+
+
 def login_required(f):
-    """Decorator: require authenticated session. Returns 401 otherwise."""
+    """Decorator: require authenticated session. Redirects to /login for pages, returns 401 for APIs."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('user_id'):
-            return jsonify({
-                'success': False,
-                'error': 'authentication_required',
-                'message': 'Authentication required.',
-            }), 401
+            return _unauthenticated_response()
         return f(*args, **kwargs)
     return decorated
 
@@ -243,7 +293,7 @@ def login_required(f):
 def permission_required(*permissions):
     """
     Decorator factory: require one or more permissions (AND logic).
-    Returns 401 if unauthenticated, 403 if lacking permission.
+    Returns 401 (or redirects to /login) if unauthenticated, 403 if lacking permission.
 
     Usage:
         @permission_required("students.view")
@@ -254,11 +304,7 @@ def permission_required(*permissions):
         def decorated(*args, **kwargs):
             if not session.get('user_id'):
                 _log_unauthorized_access(request.path)
-                return jsonify({
-                    'success': False,
-                    'error': 'authentication_required',
-                    'message': 'Authentication required.',
-                }), 401
+                return _unauthenticated_response()
 
             role = session.get('role', '')
             role_perms = ROLE_PERMISSIONS.get(role, [])
@@ -267,11 +313,7 @@ def permission_required(*permissions):
             for perm in permissions:
                 if not is_super and perm not in role_perms:
                     _log_unauthorized_access(request.path, perm)
-                    return jsonify({
-                        'success': False,
-                        'error': 'permission_denied',
-                        'message': 'You do not have permission to perform this action.',
-                    }), 403
+                    return _unauthorized_response()
 
             return f(*args, **kwargs)
         return decorated
@@ -281,24 +323,17 @@ def permission_required(*permissions):
 def role_required(*roles):
     """
     Decorator factory: restrict to specific roles.
+    Returns 401 (or redirects to /login) if unauthenticated, 403 (or redirects to /) if lacking role.
     Prefer permission_required() over this where possible.
     """
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             if not session.get('user_id'):
-                return jsonify({
-                    'success': False,
-                    'error': 'authentication_required',
-                    'message': 'Authentication required.',
-                }), 401
+                return _unauthenticated_response()
             if session.get('role') not in roles:
                 _log_unauthorized_access(request.path)
-                return jsonify({
-                    'success': False,
-                    'error': 'permission_denied',
-                    'message': 'You do not have permission to perform this action.',
-                }), 403
+                return _unauthorized_response()
             return f(*args, **kwargs)
         return decorated
     return decorator

@@ -261,7 +261,7 @@
                     <div class="input-wrap">
                         <i class="ph ph-user"></i>
                         <input type="text" id="username" placeholder="Enter your username"
-                               required autocomplete="username" value="admin">
+                               required autocomplete="username" value="">
                     </div>
                 </div>
 
@@ -270,7 +270,7 @@
                     <div class="input-wrap">
                         <i class="ph ph-lock"></i>
                         <input type="password" id="password" placeholder="Enter your password"
-                               required autocomplete="current-password" value="admin123">
+                               required autocomplete="current-password" value="">
                         <button type="button" class="toggle-pw" onclick="togglePw()" id="pw-toggle">
                             <i class="ph ph-eye" id="pw-icon"></i>
                         </button>
@@ -333,9 +333,22 @@
 
                 if (data.success) {
                     btnText.textContent = 'Redirecting...';
-                    window.location.href = '/';
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextUrl = urlParams.get('next');
+                    const safeNext = (nextUrl && nextUrl.startsWith('/') && !nextUrl.startsWith('//')) ? nextUrl : null;
+                    if (safeNext) {
+                        window.location.href = safeNext;
+                    } else if (data.user && (data.user.role === 'super_admin' || data.user.role === 'attendance_operator')) {
+                        window.location.href = '/admin';
+                    } else if (data.user && (data.user.role === 'department_head' || data.user.role === 'faculty')) {
+                        window.location.href = '/faculty';
+                    } else if (data.user && data.user.role === 'student') {
+                        window.location.href = '/student';
+                    } else {
+                        window.location.href = '/';
+                    }
                 } else {
-                    errorText.textContent = data.error || 'Invalid credentials';
+                    errorText.textContent = data.message || data.error || 'Invalid credentials';
                     errorEl.classList.add('show');
                     btn.disabled = false;
                     btnText.textContent = 'Sign In';

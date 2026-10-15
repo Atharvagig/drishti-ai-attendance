@@ -205,15 +205,14 @@ function initSocketIO() {
 
 // --- API Helpers ---
 function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
+    const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+    return match ? decodeURIComponent(match[3]) : null;
 }
 
 async function fetchAPI(endpoint, options = {}) {
     try {
         if (!options.headers) options.headers = {};
+        if (!options.credentials) options.credentials = 'same-origin';
 
         // Add CSRF token for mutations
         if (options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
@@ -225,12 +224,18 @@ async function fetchAPI(endpoint, options = {}) {
 
         const res = await fetch(endpoint, options);
         if (res.status === 401 && endpoint !== '/auth/me') {
-            window.location.href = '/login';
+            const nextParam = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?next=${nextParam}`;
             return { success: false, error: 'Unauthorized' };
         }
         if (res.status === 403) {
             document.getElementById('access-denied-modal')?.classList.remove('hidden');
-            return { success: false, error: 'Access Denied' };
+            let errMsg = 'Access Denied';
+            try {
+                const errData = await res.json();
+                errMsg = errData.message || errData.error || errMsg;
+            } catch (e) { }
+            return { success: false, error: errMsg };
         }
         if (!res.ok) {
             // Graceful fallback for API 500s or 404s
@@ -544,19 +549,18 @@ async function handleCreateSession(e) {
         camera_id: document.getElementById('sess-camera').value,
     };
 
-    const res = await fetch('/api/sessions', {
+    const data = await fetchAPI('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-    const data = await res.json();
 
-    if (data.success) {
+    if (data && data.success) {
         showToast('Success', 'Session created successfully', 'success');
         closeSessionModal();
         loadSessionsTab();
     } else {
-        showToast('Error', data.error, 'error');
+        showToast('Error', data?.error || 'Failed to create session', 'error');
     }
 }
 
@@ -791,16 +795,17 @@ function closeStudentModal() { document.getElementById('student-modal').classLis
 async function deleteStudent(sid) {
     if (!confirm('Are you sure? This will delete the student, all their biometric data, and attendance records.')) return;
 
-    const res = await fetch('/api/students/delete', {
+    const data = await fetchAPI('/api/students/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: sid })
     });
-    const data = await res.json();
-    if (data.success) {
-        showToast('Deleted', data.message, 'success');
+    if (data && data.success) {
+        showToast('Deleted', data.message || 'Student removed successfully', 'success');
         closeStudentModal();
         fetchStudents();
+    } else {
+        showToast('Error', data?.error || 'Failed to delete student', 'error');
     }
 }
 
@@ -834,23 +839,18 @@ async function handleRegister(e) {
     document.getElementById('step-2').classList.add('active');
 
     try {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrfToken = getCookie('csrf_token');
-        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-
-        const res = await fetch('/api/register', {
+        const data = await fetchAPI('/api/register', {
             method: 'POST',
-            headers: headers,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const data = await res.json();
 
-        if (data.success) {
+        if (data && data.success) {
             document.querySelectorAll('.step-item').forEach(el => el.classList.add('done'));
             showToast('Success', data.message, 'success');
             e.target.reset();
         } else {
-            showToast('Error', data.error, 'error');
+            showToast('Error', data?.error || 'Registration failed', 'error');
             document.getElementById('step-1').classList.add('active');
         }
     } catch (err) {

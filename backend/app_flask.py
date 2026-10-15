@@ -14,6 +14,7 @@ from flask import (Flask, render_template, jsonify, request,
                    send_file, session, redirect, url_for, Response)
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 import subprocess
 import threading
 import sys
@@ -46,11 +47,15 @@ app = Flask(
     template_folder=os.path.join(FRONTEND_DIR, 'templates'),
     static_folder=os.path.join(FRONTEND_DIR, 'static'),
 )
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('SECRET_KEY', 'drishti-ai-secure-key-v2-change-in-prod')
 
 # Session configuration
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_PATH'] = '/'
+if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RENDER') or os.environ.get('SESSION_COOKIE_SECURE', '').lower() == 'true':
+    app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(
     minutes=int(os.environ.get('SESSION_TIMEOUT_MINUTES', 60))
 )
@@ -94,9 +99,11 @@ def touch_session_and_csrf():
     if request.endpoint in ('auth_login', 'static'):
         return
 
-    # CSRF check for mutations
+    # CSRF check for mutations (only for authenticated sessions)
     if request.method not in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
-        # API endpoints
+        if not session.get('user_id'):
+            return  # Allow auth decorators to return 401 rather than confusing CSRF 403
+
         token = session.get('_csrf_token')
         if not token or token != request.headers.get('X-CSRFToken'):
             return jsonify({'success': False, 'error': 'csrf_failed', 'message': 'CSRF verification failed.'}), 403
@@ -105,8 +112,9 @@ def touch_session_and_csrf():
 def set_csrf_cookie(response):
     """Set CSRF token in a cookie that JS can read to send back in header."""
     if '_csrf_token' in session:
+        secure_cookie = bool(app.config.get('SESSION_COOKIE_SECURE', False) or request.is_secure)
         # httponly=False so JS can read it for the X-CSRFToken header
-        response.set_cookie('csrf_token', session['_csrf_token'], httponly=False, samesite='Lax', path='/')
+        response.set_cookie('csrf_token', session['_csrf_token'], httponly=False, samesite='Lax', path='/', secure=secure_cookie)
     return response
 
 
@@ -170,6 +178,9 @@ def student_panel():
 @app.route('/login')
 def login_page():
     if session.get('user_id'):
+        next_url = request.args.get('next')
+        if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+            return redirect(next_url)
         return redirect('/')
     return render_template('login.html')
 
@@ -1613,6 +1624,8 @@ def get_roles():
 # ── SocketIO Events ───────────────────────────────────────────────────────────
 @socketio.on('connect')
 def on_connect():
+    if not session.get('user_id'):
+        return False  # Reject unauthenticated WebSocket connections
     emit('connected', {'status': 'ok', 'message': 'Drishti AI connected'})
 
 
