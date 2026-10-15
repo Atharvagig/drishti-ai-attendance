@@ -16,6 +16,54 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, 'attendance.db')
 
+# ── Multi-Engine Backend Support (MongoDB Atlas / SQLite) ──────────────────────
+DB_BACKEND = os.getenv('DB_BACKEND', '').lower()
+MONGODB_URI = os.getenv('MONGODB_URI', '')
+USE_MONGO = False
+
+try:
+    import database_mongo as _db_mongo
+    if (DB_BACKEND == 'mongodb' or MONGODB_URI) and ('<username>' not in MONGODB_URI) and MONGODB_URI.strip():
+        try:
+            _client = _db_mongo.get_mongo_client(MONGODB_URI)
+            _client.admin.command('ping')
+            USE_MONGO = True
+            print("[Database Layer] Connected to MongoDB Atlas. Active Engine: MONGODB")
+        except Exception as _e:
+            print(f"[Database Layer] MongoDB Atlas connection failed ({_e}). Active Engine: SQLITE")
+            USE_MONGO = False
+    else:
+        print("[Database Layer] Active Engine: SQLITE (attendance.db). Set MONGODB_URI to use MongoDB Atlas.")
+except ImportError:
+    _db_mongo = None
+    print("[Database Layer] database_mongo module not loaded. Active Engine: SQLITE")
+
+
+def is_mongo_active():
+    return USE_MONGO
+
+
+def get_active_backend():
+    return 'mongodb' if USE_MONGO else 'sqlite'
+
+
+def enable_mongo(uri=None):
+    global USE_MONGO
+    if _db_mongo is None:
+        raise RuntimeError("database_mongo module is not available")
+    client = _db_mongo.get_mongo_client(uri)
+    client.admin.command('ping')
+    USE_MONGO = True
+    print("[Database Layer] Switched active database engine to MONGODB Atlas.")
+    return True
+
+
+def disable_mongo():
+    global USE_MONGO
+    USE_MONGO = False
+    print("[Database Layer] Switched active database engine to SQLITE.")
+    return True
+
 
 def get_db_connection():
     """Returns a SQLite connection with row factory and WAL mode for concurrent access."""
@@ -1449,7 +1497,41 @@ def get_classrooms():
         return [dict(r) for r in c.fetchall()]
 
 
+# ── Automatic Function Dispatcher (MongoDB Atlas / SQLite) ────────────────────
+_MONGO_DELEGATE_FUNCS = [
+    'init_db', 'seed_defaults', 'add_student', 'get_all_students', 'get_student_by_id',
+    'delete_student', 'store_face_embedding', 'get_all_face_embeddings',
+    'delete_student_embeddings', 'count_student_embeddings', 'add_attendance',
+    'get_attendance_logs', 'get_student_attendance_history', 'delete_attendance_record',
+    'override_attendance', 'mark_absent_for_session', 'create_session', 'get_all_sessions',
+    'get_session', 'update_session_status', 'get_active_session', 'get_dashboard_stats',
+    'get_attendance_trends', 'get_department_stats', 'get_at_risk_students',
+    'get_ai_insights', 'get_heatmap_data', 'get_all_cameras', 'update_camera_heartbeat',
+    'log_anomaly', 'get_anomalies', 'create_notification', 'get_notifications',
+    'mark_notification_read', 'get_unread_count', 'log_audit', 'get_audit_logs',
+    'verify_user', 'get_all_users', 'get_user_by_id', 'get_user_by_username',
+    'create_user', 'update_user', 'set_user_active', 'unlock_user',
+    'reset_user_password', 'change_own_password', 'get_audit_logs_filtered',
+    'get_subjects', 'get_classrooms'
+]
+
+if _db_mongo is not None:
+    for _fname in _MONGO_DELEGATE_FUNCS:
+        _sqlite_fn = globals().get(_fname)
+        _mongo_fn = getattr(_db_mongo, _fname, None)
+        if _sqlite_fn and _mongo_fn:
+            def _make_dispatcher(s_fn, m_fn):
+                def dispatcher(*args, **kwargs):
+                    if USE_MONGO:
+                        return m_fn(*args, **kwargs)
+                    return s_fn(*args, **kwargs)
+                dispatcher.__name__ = s_fn.__name__
+                dispatcher.__doc__ = s_fn.__doc__
+                return dispatcher
+            globals()[_fname] = _make_dispatcher(_sqlite_fn, _mongo_fn)
+
+
 if __name__ == '__main__':
     init_db()
     seed_defaults()
-    print("[Database v2.0] Ready.")
+    print(f"[Database Layer] Ready. Active Backend: {get_active_backend()}")

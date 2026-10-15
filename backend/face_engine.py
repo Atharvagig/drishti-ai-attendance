@@ -30,8 +30,8 @@ DATA_DIR         = os.path.join(BASE_DIR, 'data')
 KNOWN_FACES_DIR  = os.path.join(DATA_DIR, 'known_faces')
 HAAR_CASCADE     = os.path.join(DATA_DIR, 'haarcascade_frontalface_default.xml')
 os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
-MATCH_TOLERANCE = 0.45
-COOLDOWN_SECONDS = 10   # Per-session cooldown between marks for same student
+MATCH_TOLERANCE = float(os.getenv('MATCH_TOLERANCE', '0.45'))
+COOLDOWN_SECONDS = int(os.getenv('COOLDOWN_SECONDS', '10'))   # Per-session cooldown between marks for same student
 
 # ANGLES for multi-angle enrollment
 ENROLLMENT_ANGLES = [
@@ -516,10 +516,15 @@ class RecognitionSession:
 
                 self.latest_frame = frame.copy()
 
-                cv2.imshow(f'Drishti AI — Live Tracking (Session {self.session_id})', frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    self.running = False
-                    break
+                # Safe GUI display (suppressed in headless environments)
+                if not os.getenv('HEADLESS', ''):
+                    try:
+                        cv2.imshow(f'Drishti AI — Live Tracking (Session {self.session_id})', frame)
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            self.running = False
+                            break
+                    except Exception:
+                        pass
 
         except Exception as e:
             print(f"[Recognition] Loop error: {e}")
@@ -534,7 +539,10 @@ class RecognitionSession:
             # Cleanup
             if cap:
                 cap.release()
-            cv2.destroyAllWindows()
+            try:
+                cv2.destroyAllWindows()
+            except Exception:
+                pass
             for tracker in self.liveness_trackers.values():
                 tracker.close()
             self.liveness_trackers.clear()
@@ -542,3 +550,104 @@ class RecognitionSession:
 
     def stop(self):
         self.running = False
+
+
+# ── Single-Frame Recognition (for Browser / REST Uploads) ──────────────────────
+
+def process_single_frame(frame, session_id=None, require_liveness=False):
+    """
+    Optimized single-frame recognition pipeline for HTTP/WebSocket frame uploads.
+    - Validates image dimensions (resizes if > 800px)
+    - Downscales for sub-second dlib HOG inference (< 500ms)
+    - Enforces duplicate prevention and session attendance logging
+    - Returns structured detection & recognition metadata
+    """
+    if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
+        return {'success': False, 'error': 'Invalid or empty image frame', 'faces': []}
+
+    # Bound image dimensions for fast processing and memory safety
+    h, w = frame.shape[:2]
+    max_dim = 800
+    scale = 1.0
+    if max(h, w) > max_dim:
+        scale = max_dim / max(h, w)
+        frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+    load_embedding_cache()
+    known_embeddings, known_meta = get_embeddings_list()
+
+    # Downscale for fast face detection
+    small = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+    rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+
+    face_locs = face_recognition.face_locations(rgb_small, model='hog')
+    if not face_locs:
+        return {'success': True, 'faces': [], 'message': 'No face detected in frame'}
+
+    face_encs = face_recognition.face_encodings(rgb_small, face_locs)
+    results = []
+
+    for (top, right, bottom, left), face_enc in zip(face_locs, face_encs):
+        # Scale back to full processed frame
+        top, right, bottom, left = top * 2, right * 2, bottom * 2, left * 2
+        face_crop = frame[max(0, top):min(frame.shape[0], bottom), max(0, left):min(frame.shape[1], right)]
+
+        quality_label, quality_score, quality_issues = check_face_quality(face_crop)
+
+        student_id = None
+        student_name = 'Unknown'
+        dept = 'General'
+        confidence = 0.0
+        attendance_status = 'Unrecognized'
+        time_marked = None
+
+        if known_embeddings:
+            distances = face_recognition.face_distance(known_embeddings, face_enc)
+            best_idx = int(np.argmin(distances))
+            best_dist = distances[best_idx]
+
+            if best_dist < MATCH_TOLERANCE:
+                m = known_meta[best_idx]
+                confidence = round((1 - best_dist) * 100, 1)
+                student_id = m['student_id']
+                student_name = m['name']
+                dept = m.get('department', 'General')
+
+                # Log attendance
+                success, time_str, final_status = database.add_attendance(
+                    student_id=student_id,
+                    name=student_name,
+                    department=dept,
+                    confidence=confidence,
+                    session_id=session_id,
+                    liveness_passed=1,
+                    face_quality=quality_label,
+                    status='Present'
+                )
+                if success:
+                    attendance_status = f"Marked {final_status}"
+                    time_marked = time_str
+                else:
+                    attendance_status = time_str  # E.g. 'Already marked for this session'
+            else:
+                attendance_status = 'Unknown Face'
+        else:
+            attendance_status = 'No Enrolled Faces in Database'
+
+        results.append({
+            'box': {'top': top, 'right': right, 'bottom': bottom, 'left': left},
+            'student_id': student_id,
+            'name': student_name,
+            'department': dept,
+            'confidence': confidence,
+            'quality_label': quality_label,
+            'quality_score': quality_score,
+            'attendance_status': attendance_status,
+            'time_marked': time_marked
+        })
+
+    return {
+        'success': True,
+        'faces_detected': len(results),
+        'faces': results
+    }

@@ -575,16 +575,26 @@
                         </div>
                         <h2>Initialize Camera Engine</h2>
                         <p>Launches live face recognition with liveness detection (MediaPipe EAR + head pose), 128-D dlib embeddings, and real-time attendance marking.</p>
-                        <button class="btn-primary glow-btn pulse-btn" id="btn-start-attendance"
-                                onclick="startAttendance()">
-                            <i class="ph ph-rocket-launch"></i>
-                            <span>Start Camera Tracking</span>
-                        </button>
+                        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:16px;">
+                            <button class="btn-primary glow-btn pulse-btn" id="btn-start-attendance"
+                                    onclick="startAttendance()">
+                                <i class="ph ph-rocket-launch"></i>
+                                <span>Hardware Camera</span>
+                            </button>
+                            <button class="btn-secondary" id="btn-start-browser-cam"
+                                    onclick="startBrowserWebcamAttendance()"
+                                    style="padding:10px 18px; border-radius:8px; display:inline-flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                                <i class="ph ph-webcam"></i>
+                                <span>Browser Webcam</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- MJPEG stream (shown when active) -->
+                    <!-- MJPEG stream or Browser Webcam (shown when active) -->
                     <div id="camera-live" class="camera-live-feed hidden">
                         <img id="camera-stream" src="" alt="Live camera feed" class="cam-feed">
+                        <video id="browser-webcam" autoplay playsinline muted class="cam-feed hidden" style="width:100%; height:100%; object-fit:cover; border-radius:12px;"></video>
+                        <canvas id="browser-capture-canvas" style="display:none;"></canvas>
                         <div class="cam-overlay-badge">
                             <span class="pulse-dot"></span> LIVE
                         </div>

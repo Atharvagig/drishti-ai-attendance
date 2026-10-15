@@ -1066,6 +1066,103 @@ def start_attendance_legacy():
         return err500(e)
 
 
+# ── Health Check Endpoint ──────────────────────────────────────────────────────
+@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
+def health_check():
+    """System health check for cloud monitoring, load balancers, and deployment verification."""
+    try:
+        from face_engine import get_embeddings_list, MATCH_TOLERANCE
+        embs, _ = get_embeddings_list()
+        embed_count = len(embs)
+    except Exception:
+        embed_count = 0
+        MATCH_TOLERANCE = 0.45
+
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'database': {
+            'active_backend': database.get_active_backend(),
+            'is_mongo_active': database.is_mongo_active()
+        },
+        'face_recognition': {
+            'engine': 'dlib 128-D',
+            'tolerance': MATCH_TOLERANCE,
+            'cached_embeddings': embed_count
+        },
+        'version': '2.1.0'
+    }), 200
+
+
+# ── Frame-by-Frame Recognition Endpoint (Browser Camera / Cloud Ready) ───────
+@app.route('/api/recognize_frame', methods=['POST'])
+@login_required
+def recognize_frame():
+    """
+    Accepts an uploaded video frame (base64 JSON or multipart file), runs dlib face recognition,
+    enforces duplicate prevention, and logs attendance.
+    Supports headless/cloud deployments where server lacks hardware webcam.
+    """
+    import base64
+    import cv2
+    import numpy as np
+    from face_engine import process_single_frame
+
+    try:
+        session_id = request.args.get('session_id')
+        if not session_id and request.is_json:
+            session_id = request.json.get('session_id')
+        if session_id:
+            try:
+                session_id = int(session_id)
+            except ValueError:
+                session_id = None
+
+        frame = None
+        # Handle Base64 in JSON payload
+        if request.is_json and 'frame' in request.json:
+            b64_str = request.json['frame']
+            if ',' in b64_str:
+                b64_str = b64_str.split(',', 1)[1]
+            img_bytes = base64.b64decode(b64_str)
+            if len(img_bytes) > 5 * 1024 * 1024:
+                return jsonify({'success': False, 'error': 'Image exceeds 5MB size limit'}), 413
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        # Handle Multipart Form File Upload
+        elif 'frame' in request.files:
+            file = request.files['frame']
+            img_bytes = file.read()
+            if len(img_bytes) > 5 * 1024 * 1024:
+                return jsonify({'success': False, 'error': 'Image exceeds 5MB size limit'}), 413
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if frame is None or frame.size == 0:
+            return jsonify({'success': False, 'error': 'Failed to decode image frame'}), 400
+
+        result = process_single_frame(frame, session_id=session_id)
+
+        # Broadcast real-time Socket.IO events for recognized faces
+        for face in result.get('faces', []):
+            if face.get('student_id') and face.get('confidence', 0) > 0:
+                socketio.emit('attendance_marked', {
+                    'student_id': face['student_id'],
+                    'name': face['name'],
+                    'department': face['department'],
+                    'time': face.get('time_marked') or datetime.now().strftime('%H:%M:%S'),
+                    'status': face['attendance_status'],
+                    'confidence': face['confidence'],
+                    'session_id': session_id,
+                })
+
+        return jsonify(result), 200
+    except Exception as e:
+        return err500(e)
+
+
 # ── Analytics ─────────────────────────────────────────────────────────────────
 @app.route('/api/analytics/overview', methods=['GET'])
 @permission_required('analytics.view')
