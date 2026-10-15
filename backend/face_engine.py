@@ -313,7 +313,35 @@ class RecognitionSession:
 
     def _anomaly(self, anomaly_type, description, student_id='', severity='medium'):
         aid = database.log_anomaly(anomaly_type, description,
-                                   self.s        self.running = True
+                                   self.session_id, student_id, severity)
+        database.create_notification(
+            title=f'Anomaly: {anomaly_type}',
+            message=description,
+            type='warning'
+        )
+        self._emit('anomaly_detected', {
+            'id': aid,
+            'type': anomaly_type,
+            'description': description,
+            'student_id': student_id,
+            'severity': severity,
+            'time': time.strftime('%H:%M:%S'),
+        })
+
+    def run(self):
+        """Main recognition loop. Blocks until stopped or 'q' pressed."""
+        print(f"[Recognition] Starting session {self.session_id}...")
+        load_embedding_cache()
+        known_embeddings, known_meta = get_embeddings_list()
+        print(f"[Recognition] {len(known_embeddings)} face embeddings loaded.")
+
+        cap, cam_idx, backend = camera_utils.get_working_camera(preferred_index=0)
+        use_synthetic = cap is None
+        if cap:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+        self.running = True
         frame_count = 0
         fps_start = time.time()
 
@@ -510,34 +538,7 @@ class RecognitionSession:
             for tracker in self.liveness_trackers.values():
                 tracker.close()
             self.liveness_trackers.clear()
-            print(f"[Recognition] Session {self.session_id} ended.")} | Recog:{recognized_count} | "
-                      f"Unknown:{unknown_count} | Press Q to stop")
-            cv2.putText(frame, banner, (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
-                        (255, 215, 0), 2)
-
-            # Camera heartbeat
-            if frame_count % 30 == 0:
-                database.update_camera_heartbeat('CAM-01', 'online', self.stats['fps'])
-
-            # Emit stats to dashboard
-            if frame_count % 10 == 0:
-                self._emit('camera_stats', self.stats)
-
-            self.latest_frame = frame.copy()
-
-            cv2.imshow(f'Drishti AI — Live Tracking (Session {self.session_id})', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                self.running = False
-                break
-
-        # Cleanup
-        if cap:
-            cap.release()
-        cv2.destroyAllWindows()
-        for tracker in self.liveness_trackers.values():
-            tracker.close()
-        self.liveness_trackers.clear()
-        print(f"[Recognition] Session {self.session_id} ended.")
+            print(f"[Recognition] Session {self.session_id} ended.")
 
     def stop(self):
         self.running = False
