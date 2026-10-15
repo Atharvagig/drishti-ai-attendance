@@ -3,8 +3,8 @@ services:
     name: drishti-ai-attendance
     runtime: docker
     plan: free
-    region: oregon
     dockerfilePath: ./Dockerfile
+    startCommand: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --chdir backend app_flask:app
     healthCheckPath: /api/health
     envVars:
       - key: FLASK_ENV

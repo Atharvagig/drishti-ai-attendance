@@ -3,6 +3,13 @@ Drishti AI — Flask Application v2.1 (RBAC Edition)
 Full REST API + SocketIO real-time updates.
 Endpoints protected with centralized permission decorators from rbac.py.
 """
+# Apply eventlet monkey patching if eventlet is available in the environment
+try:
+    import eventlet
+    eventlet.monkey_patch()
+except ImportError:
+    pass
+
 from flask import (Flask, render_template, jsonify, request,
                    send_file, session, redirect, url_for, Response)
 from flask_socketio import SocketIO, emit
@@ -49,7 +56,8 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(
 )
 
 CORS(app, supports_credentials=True)
-socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading',
+async_mode = 'eventlet' if 'eventlet' in sys.modules else 'threading'
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode=async_mode,
                     logger=False, engineio_logger=False)
 
 # Initialize DB + seed RBAC defaults
