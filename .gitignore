@@ -1,11 +1,16 @@
-# Python
+# ── Python Virtual Environments ──────────────────────────────────────────────
 venv/
-*.pyc
+venv*/
+.venv/
+env/
+ENV/
+
+# ── Python Bytecode & Cache ──────────────────────────────────────────────────
 __pycache__/
-*.pyo
+*.py[cod]
+*$py.class
 *.pyd
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -22,31 +27,54 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment & Local Wheels
-dlib-*.whl
+# ── Testing & Coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ── Local Wheels & Binary Archives ───────────────────────────────────────────
+*.whl
 *.zip
+*.tar.gz
+*.rar
 
-# Environment & Credentials
+# ── Environment Variables & Credentials ──────────────────────────────────────
 .env
-.env.local
+.env.*
+!.env.example
 
-# IDEs & Editors
+# ── IDEs, Editors & OS Files ──────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS & Cache
+*~
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Database and Data Files
+# ── Local Databases, Backups & Logs ───────────────────────────────────────────
 *.db
-*.bak
-*.log
+*.db-journal
 *.sqlite
 *.sqlite3
+*.bak
+*.log
+logs/
+*.tmp
+*.temp
+
+# ── Dynamic Attendance Exports ────────────────────────────────────────────────
 *.xlsx
 *.csv
-backend/data/known_faces/*.jpg
+
+# ── Biometric Datasets & Local Facial Images ───────────────────────────────────
+backend/data/known_faces/
 backend/data/dataset/
+known_faces/
+dataset/
+*.pkl
+*.npy
+*.npz
