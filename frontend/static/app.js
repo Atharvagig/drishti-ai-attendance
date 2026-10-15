@@ -897,13 +897,93 @@ async function startAttendance() {
     }
 }
 
+let browserWebcamStream = null;
+let browserWebcamInterval = null;
+
 function startTrackingUI() {
     document.getElementById('camera-offline').classList.add('hidden');
     document.getElementById('camera-live').classList.remove('hidden');
 
-    // Start MJPEG stream
     const img = document.getElementById('camera-stream');
-    img.src = '/api/camera/stream?' + new Date().getTime(); // cache bust
+    const vid = document.getElementById('browser-webcam');
+    if (vid) vid.classList.add('hidden');
+    if (img) {
+        img.classList.remove('hidden');
+        img.src = '/api/camera/stream?' + new Date().getTime(); // cache bust
+    }
+}
+
+async function startBrowserWebcamAttendance() {
+    const sessId = document.getElementById('session-select')?.value || null;
+    const video = document.getElementById('browser-webcam');
+    const img = document.getElementById('camera-stream');
+    const canvas = document.getElementById('browser-capture-canvas');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('Camera Error', 'Browser webcam requires HTTPS or localhost.', 'error');
+        return;
+    }
+
+    try {
+        browserWebcamStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        });
+        if (video) {
+            video.srcObject = browserWebcamStream;
+            await video.play();
+        }
+
+        document.getElementById('camera-offline').classList.add('hidden');
+        document.getElementById('camera-live').classList.remove('hidden');
+        if (img) img.classList.add('hidden');
+        if (video) video.classList.remove('hidden');
+
+        const dot = document.getElementById('cam-status-dot');
+        if (dot) dot.className = 'status-dot online';
+        const txt = document.getElementById('cam-status-text');
+        if (txt) txt.textContent = 'BROWSER WEBCAM';
+
+        showToast('Camera Active', 'Browser webcam started. Analyzing faces...', 'info');
+
+        // Capture frame every 1.5 seconds and post to /api/recognize_frame
+        browserWebcamInterval = setInterval(async () => {
+            if (!video || !video.videoWidth || !canvas) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const b64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const res = await fetchAPI('/api/recognize_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: b64, session_id: sessId })
+                });
+                if (res && res.success && res.faces && res.faces.length > 0) {
+                    const facesEl = document.getElementById('cam-faces');
+                    if (facesEl) facesEl.textContent = res.faces.length;
+                    res.faces.forEach(f => {
+                        addRecognitionEvent({
+                            name: f.name,
+                            student_id: f.student_id,
+                            department: f.department,
+                            confidence: f.confidence,
+                            status: f.attendance_status.includes('Late') ? 'Late' : (f.student_id ? 'Present' : 'Unknown'),
+                            time: f.time_marked || new Date().toLocaleTimeString()
+                        });
+                        showToast('Recognition', `${f.name}: ${f.attendance_status} (${f.confidence}%)`, f.student_id ? 'success' : 'info');
+                    });
+                }
+            } catch (err) {
+                console.error('Frame recognition error:', err);
+            }
+        }, 1500);
+
+    } catch (err) {
+        console.error('Failed to access browser camera:', err);
+        showToast('Webcam Access Denied', 'Please allow camera permission in your browser.', 'error');
+    }
 }
 
 async function stopAttendanceSession() {
@@ -915,16 +995,40 @@ async function stopAttendanceSession() {
 }
 
 function stopTrackingUI() {
+    // Stop browser webcam interval and streams
+    if (browserWebcamInterval) {
+        clearInterval(browserWebcamInterval);
+        browserWebcamInterval = null;
+    }
+    if (browserWebcamStream) {
+        browserWebcamStream.getTracks().forEach(t => t.stop());
+        browserWebcamStream = null;
+    }
+
     document.getElementById('camera-offline').classList.remove('hidden');
     document.getElementById('camera-live').classList.add('hidden');
-    document.getElementById('btn-start-attendance').disabled = false;
-    document.getElementById('camera-stream').src = '';
+    const btn = document.getElementById('btn-start-attendance');
+    if (btn) btn.disabled = false;
+    const btnBrowser = document.getElementById('btn-start-browser-cam');
+    if (btnBrowser) btnBrowser.disabled = false;
+
+    const img = document.getElementById('camera-stream');
+    if (img) img.src = '';
+    const vid = document.getElementById('browser-webcam');
+    if (vid) {
+        vid.srcObject = null;
+        vid.classList.add('hidden');
+    }
 
     // Reset stats
-    document.getElementById('cam-status-dot').className = 'status-dot offline';
-    document.getElementById('cam-status-text').textContent = 'OFFLINE';
-    document.getElementById('cam-fps').textContent = '0';
-    document.getElementById('cam-faces').textContent = '0';
+    const dot = document.getElementById('cam-status-dot');
+    if (dot) dot.className = 'status-dot offline';
+    const txt = document.getElementById('cam-status-text');
+    if (txt) txt.textContent = 'OFFLINE';
+    const fps = document.getElementById('cam-fps');
+    if (fps) fps.textContent = '0';
+    const faces = document.getElementById('cam-faces');
+    if (faces) faces.textContent = '0';
 }
 
 function addRecognitionEvent(data) {
