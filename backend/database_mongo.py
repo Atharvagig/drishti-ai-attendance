@@ -16,6 +16,12 @@ from pymongo import MongoClient, ASCENDING, DESCENDING
 from bson.binary import Binary
 from bson.objectid import ObjectId
 
+try:
+    import certifi
+    _CERTIFI_CA = certifi.where()
+except Exception:
+    _CERTIFI_CA = None
+
 # ── Environment & Connection Configuration ─────────────────────────────────────
 DEFAULT_MONGO_URI = os.getenv(
     'MONGODB_URI',
@@ -28,21 +34,28 @@ _db = None
 
 
 def get_mongo_client(uri=None):
-    """Returns a singleton MongoDB client with connection pooling and timeouts."""
+    """Returns a singleton MongoDB client with connection pooling, timeouts, and verified TLS CA certificates."""
     global _client
     if _client is None:
         target_uri = uri or os.getenv('MONGODB_URI')
-        if not target_uri or '<username>' in target_uri:
+        if not target_uri or '<username>' in target_uri or '<password>' in target_uri:
             raise ValueError("MONGODB_URI is not set or contains default placeholders.")
-        _client = MongoClient(
-            target_uri,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-            socketTimeoutMS=10000,
-            maxPoolSize=50,
-            minPoolSize=5,
-            retryWrites=True
-        )
+        
+        target_uri = target_uri.strip().strip('"').strip("'")
+        
+        client_kwargs = {
+            'serverSelectionTimeoutMS': 10000,
+            'connectTimeoutMS': 10000,
+            'socketTimeoutMS': 15000,
+            'maxPoolSize': 50,
+            'minPoolSize': 5,
+            'retryWrites': True,
+        }
+        
+        if _CERTIFI_CA and os.path.exists(_CERTIFI_CA):
+            client_kwargs['tlsCAFile'] = _CERTIFI_CA
+            
+        _client = MongoClient(target_uri, **client_kwargs)
     return _client
 
 

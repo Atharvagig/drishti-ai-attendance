@@ -7,12 +7,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CMAKE_BUILD_PARALLEL_LEVEL=1 \
     MAKEFLAGS="-j1"
 
-# Install minimal build tools needed for Python wheel installation
+# Install minimal build tools needed for Python wheel installation and CA certs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libopenblas-dev \
     liblapack-dev \
+    ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -38,13 +40,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=5000 \
     FLASK_ENV=production
 
-# Install only runtime shared libraries (no compilers, no cmake, no dev tools)
+# Install only runtime shared libraries and CA certificates for Atlas TLS verification
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas0 \
     liblapack3 \
     libgl1 \
     libglib2.0-0 \
+    ca-certificates \
     curl \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

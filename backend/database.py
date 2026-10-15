@@ -46,10 +46,18 @@ if DB_BACKEND == 'mongodb' or (FLASK_ENV == 'production' and DB_BACKEND != 'sqli
         USE_MONGO = True
         print("[Database Layer] Connected to MongoDB Atlas. Active Engine: MONGODB")
     except Exception as _e:
+        err_msg = str(_e)
+        tls_hint = ""
+        if 'TLSV1_ALERT_INTERNAL_ERROR' in err_msg or 'SSL' in err_msg:
+            tls_hint = (
+                " -> [Atlas Diagnostic Hint: Atlas terminates TLS handshakes with TLSV1_ALERT_INTERNAL_ERROR "
+                "when the client IP address is not permitted in Atlas Network Access. In MongoDB Atlas Dashboard -> "
+                "Network Access, ensure 0.0.0.0/0 (Allow from Anywhere) is active. Also verify that special "
+                "characters in your password are URL-encoded]."
+            )
         raise RuntimeError(
-            f"CRITICAL DATABASE CONNECTION FAILURE: Failed to connect to MongoDB Atlas ({_e}). "
-            f"Silent fallback to SQLite is prohibited when MongoDB is active. "
-            f"Please verify Atlas network egress whitelisting, cluster state, and credentials."
+            f"CRITICAL DATABASE CONNECTION FAILURE: Failed to connect to MongoDB Atlas ({err_msg}). "
+            f"Silent fallback to SQLite is prohibited when MongoDB is active.{tls_hint}"
         )
 
 elif MONGODB_URI and ('<username>' not in MONGODB_URI) and MONGODB_URI.strip():
