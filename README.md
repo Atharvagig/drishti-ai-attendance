@@ -15,7 +15,6 @@
 | Resource | URL |
 | :--- | :--- |
 | **Production Application** | [https://drishti-ai-attendance.onrender.com](https://drishti-ai-attendance.onrender.com/) |
-| **System Health API** | [https://drishti-ai-attendance.onrender.com/api/health](https://drishti-ai-attendance.onrender.com/api/health) |
 | **GitHub Repository** | [https://github.com/Atharvagig/drishti-ai-attendance](https://github.com/Atharvagig/drishti-ai-attendance) |
 | **Project Submission Package** | [`submission/`](file:///d:/project/submission) |
 
