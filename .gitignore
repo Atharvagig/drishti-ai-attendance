@@ -42,6 +42,8 @@ Thumbs.db
 
 # Database and Data Files
 *.db
+*.bak
+*.log
 *.sqlite
 *.sqlite3
 *.xlsx

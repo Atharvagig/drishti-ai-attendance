@@ -38,8 +38,9 @@ This guide walks you through setting up a free **MongoDB Atlas** cloud cluster, 
 ### B. Configure Network Access (IP Whitelist)
 1. In the Atlas left sidebar, navigate to **Security** -> **Network Access**.
 2. Click **Add IP Address**.
-3. For deployment flexibility across mobile networks, college Wi-Fi, and cloud hosts, select **Allow Access from Anywhere** (`0.0.0.0/0`).
-4. Click **Confirm**. (Takes ~1 minute to activate).
+3. **Production Best Practice:** Add the specific outbound IP address or CIDR range of your backend hosting provider (e.g., Render/AWS/VPS static outbound IP), or your current local development IP (**Add Current IP Address**).
+4. **Testing / Demo Note:** If your hosting provider uses dynamic egress IPs and lacks static egress IPs, you may temporarily select **Allow Access from Anywhere** (`0.0.0.0/0`), but restrict it with a timed expiration in Atlas and remove it after testing.
+5. Click **Confirm**. (Takes ~1 minute to activate).
 
 ### C. Obtain the Connection String
 1. In the Atlas left sidebar, click **Database** -> **Connect**.
@@ -190,20 +191,27 @@ users                     | 4        | 4        | VERIFIED
 
 ---
 
-## 7. Rollback Procedure
+## 7. Rollback & Local Offline Demo Procedure
 
-If MongoDB Atlas is temporarily unreachable or internet is disconnected during college presentation:
+### Production Fail-Fast Assurance:
+In production mode (`FLASK_ENV=production` or `DB_BACKEND=mongodb`), **silent fallback to SQLite is strictly disabled**. If MongoDB Atlas is unreachable, the system raises a clear `RuntimeError` immediately rather than silently writing attendance to a local file while falsely claiming cloud persistence.
 
-1. **Option A (Environment Switch):**
-   In `.env`, comment out or delete `MONGODB_URI`, or set:
+### Local Offline Demo Mode (For Viva / Presentations without Internet):
+If college Wi-Fi is unavailable or you want to present completely offline:
+1. Explicitly select SQLite by setting the environment variable in `.env`:
    ```bash
    DB_BACKEND=sqlite
+   FLASK_ENV=development
    ```
-2. **Option B (Zero-Config Automatic Fallback):**
-   If MongoDB Atlas connection fails or times out, the database layer automatically logs:
+2. Start the application:
+   ```bash
+   .\start.bat
+   ```
+3. The server logs:
    ```text
-   [Database Layer] MongoDB Atlas connection failed. Active Engine: SQLITE
+   [Database Layer] Active Engine: SQLITE (Explicitly selected for local demo / offline mode).
    ```
-   and immediately runs off the local `data/attendance.db` without crashing!
-3. **Immutable SQLite Backup:**
-   An untouched backup exists at `backend/data/attendance.db.bak` to ensure your original records can never be lost.
+
+### Preserved Database Backups:
+- The active SQLite database is at `backend/data/attendance.db`.
+- An immutable pre-migration backup is preserved at `backend/data/attendance.db.bak` ensuring complete data safety.

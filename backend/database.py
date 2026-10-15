@@ -19,24 +19,55 @@ DB_PATH = os.path.join(DATA_DIR, 'attendance.db')
 # ── Multi-Engine Backend Support (MongoDB Atlas / SQLite) ──────────────────────
 DB_BACKEND = os.getenv('DB_BACKEND', '').lower()
 MONGODB_URI = os.getenv('MONGODB_URI', '')
+FLASK_ENV = os.getenv('FLASK_ENV', 'development').lower()
 USE_MONGO = False
 
 try:
     import database_mongo as _db_mongo
-    if (DB_BACKEND == 'mongodb' or MONGODB_URI) and ('<username>' not in MONGODB_URI) and MONGODB_URI.strip():
-        try:
-            _client = _db_mongo.get_mongo_client(MONGODB_URI)
-            _client.admin.command('ping')
-            USE_MONGO = True
-            print("[Database Layer] Connected to MongoDB Atlas. Active Engine: MONGODB")
-        except Exception as _e:
-            print(f"[Database Layer] MongoDB Atlas connection failed ({_e}). Active Engine: SQLITE")
-            USE_MONGO = False
-    else:
-        print("[Database Layer] Active Engine: SQLITE (attendance.db). Set MONGODB_URI to use MongoDB Atlas.")
 except ImportError:
-    _db_mongo = None
-    print("[Database Layer] database_mongo module not loaded. Active Engine: SQLITE")
+    try:
+        from backend import database_mongo as _db_mongo
+    except ImportError:
+        _db_mongo = None
+
+# Production or Explicit MongoDB selection: MUST NOT silently fall back to SQLite
+if DB_BACKEND == 'mongodb' or (FLASK_ENV == 'production' and DB_BACKEND != 'sqlite'):
+    if not _db_mongo:
+        raise RuntimeError("CRITICAL DATABASE FAILURE: database_mongo module failed to load, but MongoDB is required in production.")
+    if not MONGODB_URI or '<username>' in MONGODB_URI or not MONGODB_URI.strip():
+        raise RuntimeError(
+            "CRITICAL DATABASE CONFIGURATION ERROR: MONGODB_URI is not configured in production or when DB_BACKEND=mongodb. "
+            "Silent fallback to SQLite is prohibited. Configure a valid MONGODB_URI in your environment or .env, "
+            "or set DB_BACKEND=sqlite explicitly for local demo."
+        )
+    try:
+        _client = _db_mongo.get_mongo_client(MONGODB_URI)
+        _client.admin.command('ping')
+        USE_MONGO = True
+        print("[Database Layer] Connected to MongoDB Atlas. Active Engine: MONGODB")
+    except Exception as _e:
+        raise RuntimeError(
+            f"CRITICAL DATABASE CONNECTION FAILURE: Failed to connect to MongoDB Atlas ({_e}). "
+            f"Silent fallback to SQLite is prohibited when MongoDB is active. "
+            f"Please verify Atlas network egress whitelisting, cluster state, and credentials."
+        )
+
+elif MONGODB_URI and ('<username>' not in MONGODB_URI) and MONGODB_URI.strip():
+    # Development mode with MONGODB_URI provided:
+    try:
+        _client = _db_mongo.get_mongo_client(MONGODB_URI)
+        _client.admin.command('ping')
+        USE_MONGO = True
+        print("[Database Layer] Connected to MongoDB Atlas. Active Engine: MONGODB")
+    except Exception as _e:
+        raise RuntimeError(
+            f"CRITICAL DATABASE CONNECTION FAILURE: MONGODB_URI was specified but connection failed ({_e}). "
+            f"Silent fallback is prohibited. To use SQLite for local demo, set DB_BACKEND=sqlite or remove MONGODB_URI."
+        )
+else:
+    # Explicit SQLite local demo mode
+    USE_MONGO = False
+    print("[Database Layer] Active Engine: SQLITE (Explicitly selected for local demo / offline mode).")
 
 
 def is_mongo_active():
@@ -433,16 +464,37 @@ def seed_defaults():
         # Safely rename role 'admin' → 'super_admin' on existing rows
         c.execute("UPDATE users SET role = 'super_admin' WHERE role = 'admin'")
 
-        # ── Ensure super_admin user exists ────────────────────────────────────────
-        c.execute('SELECT id FROM users WHERE username = ?', ('admin',))
-        if not c.fetchone():
-            pw_hash = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
+        # ── Ensure super_admin user exists with secure password ───────────────────
+        env_mode = os.getenv('FLASK_ENV', 'development').lower()
+        admin_pass = os.getenv('ADMIN_PASSWORD', '').strip()
+
+        if env_mode == 'production':
+            if not admin_pass or admin_pass == 'admin123' or len(admin_pass) < 8:
+                raise RuntimeError(
+                    "CRITICAL SECURITY REQUIREMENT: In production (FLASK_ENV=production), "
+                    "you MUST set a secure ADMIN_PASSWORD environment variable with at least 8 characters. "
+                    "Default credentials (admin/admin123) are prohibited in production."
+                )
+            admin_pw_bytes = admin_pass.encode()
+        else:
+            admin_pw_bytes = admin_pass.encode() if (admin_pass and len(admin_pass) >= 8) else b'admin123'
+            if admin_pw_bytes == b'admin123':
+                print("[Security Notice] Local Demo Mode: Default admin credentials active (admin / admin123). Set ADMIN_PASSWORD in .env for custom password.")
+
+        c.execute('SELECT id, password_hash FROM users WHERE username = ?', ('admin',))
+        existing_admin = c.fetchone()
+        if not existing_admin:
+            pw_hash = bcrypt.hashpw(admin_pw_bytes, bcrypt.gensalt()).decode()
             c.execute('''
                 INSERT INTO users
                     (username, password_hash, role, name, full_name, email, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, 1)
             ''', ('admin', pw_hash, 'super_admin', 'Administrator',
                   'System Administrator', 'admin@drishti.ai'))
+        elif admin_pass and len(admin_pass) >= 8:
+            # Update password if explicitly configured in environment
+            pw_hash = bcrypt.hashpw(admin_pw_bytes, bcrypt.gensalt()).decode()
+            c.execute('UPDATE users SET password_hash = ? WHERE username = ?', (pw_hash, 'admin'))
 
         # ── Ensure faculty demo user exists ───────────────────────────────────────
         c.execute('SELECT id FROM users WHERE username = ?', ('faculty',))
@@ -458,6 +510,20 @@ def seed_defaults():
         else:
             # Ensure existing faculty user has is_active set
             c.execute("UPDATE users SET is_active = 1 WHERE username = 'faculty' AND is_active IS NULL")
+
+        # ── Ensure student demo user exists ───────────────────────────────────────
+        c.execute('SELECT id FROM users WHERE username = ?', ('student',))
+        if not c.fetchone():
+            pw_hash = bcrypt.hashpw(b'student123', bcrypt.gensalt()).decode()
+            c.execute('''
+                INSERT INTO users
+                    (username, password_hash, role, name, full_name, email,
+                     department_id, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ''', ('student', pw_hash, 'student', 'Demo Student',
+                  'Demo Student', 'student@drishti.ai', aids_id))
+        else:
+            c.execute("UPDATE users SET is_active = 1 WHERE username = 'student' AND is_active IS NULL")
 
         # ── Ensure existing users have is_active set ──────────────────────────────
         c.execute('UPDATE users SET is_active = 1 WHERE is_active IS NULL')

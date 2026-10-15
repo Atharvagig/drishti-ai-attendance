@@ -18,7 +18,7 @@ Use this checklist on the day of your minor project submission and viva presenta
 ---
 
 ## 🔑 2. Account Credentials for Live Demo
-- [ ] **Super Admin:** Username `admin` / Password `admin123` (Full system access)
+- [ ] **Super Admin:** Username `admin` / Password `admin123` (Local demo default; rejected in production if `ADMIN_PASSWORD` is unset)
 - [ ] **Faculty:** Username `faculty` / Password `faculty123` (Session and attendance management)
 - [ ] **Student:** Username `student` / Password `student123` (Individual attendance history)
 
@@ -27,8 +27,9 @@ Use this checklist on the day of your minor project submission and viva presenta
 ## 🗄️ 3. Database & MongoDB Atlas Migration
 - [ ] Local SQLite backup verified at [`backend/data/attendance.db.bak`](file:///d:/project/backend/data/attendance.db.bak).
 - [ ] Migration script tested: `python backend/migrate_to_mongo.py --mock` (15/15 tables verified).
-- [ ] If using live Atlas cluster, ensure `MONGODB_URI` is added to [`.env`](file:///d:/project/.env).
-- [ ] Dual-engine resilience confirmed: system gracefully uses SQLite if Atlas is disconnected.
+- [ ] To use live Atlas: add your verified `MONGODB_URI` to [`.env`](file:///d:/project/.env) and run `python backend/migrate_to_mongo.py`.
+- [ ] Production Fail-Fast verified: if MongoDB is active or in production and Atlas is unreachable, it raises `RuntimeError` (silent fallback to SQLite is blocked).
+- [ ] Explicit local demo option: set `DB_BACKEND=sqlite` in `.env` for offline viva presentations.
 
 ---
 

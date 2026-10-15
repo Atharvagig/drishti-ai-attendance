@@ -279,8 +279,25 @@ def seed_defaults(db=None):
             })
 
     # Users: Admin
-    if not database.users.find_one({'username': 'admin'}):
-        pw_hash = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
+    env_mode = os.getenv('FLASK_ENV', 'development').lower()
+    admin_pass = os.getenv('ADMIN_PASSWORD', '').strip()
+
+    if env_mode == 'production':
+        if not admin_pass or admin_pass == 'admin123' or len(admin_pass) < 8:
+            raise RuntimeError(
+                "CRITICAL SECURITY REQUIREMENT: In production (FLASK_ENV=production), "
+                "you MUST set a secure ADMIN_PASSWORD environment variable with at least 8 characters. "
+                "Default credentials (admin/admin123) are prohibited in production."
+            )
+        admin_pw_bytes = admin_pass.encode()
+    else:
+        admin_pw_bytes = admin_pass.encode() if (admin_pass and len(admin_pass) >= 8) else b'admin123'
+        if admin_pw_bytes == b'admin123':
+            print("[Security Notice] Local Demo Mode: Default admin credentials active (admin / admin123). Set ADMIN_PASSWORD in .env for custom password.")
+
+    existing_admin = database.users.find_one({'username': 'admin'})
+    if not existing_admin:
+        pw_hash = bcrypt.hashpw(admin_pw_bytes, bcrypt.gensalt()).decode()
         u_id = get_next_sequence_value('users', database)
         database.users.insert_one({
             'id': u_id,
@@ -299,6 +316,9 @@ def seed_defaults(db=None):
             'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'last_login': None
         })
+    elif admin_pass and len(admin_pass) >= 8:
+        pw_hash = bcrypt.hashpw(admin_pw_bytes, bcrypt.gensalt()).decode()
+        database.users.update_one({'username': 'admin'}, {'$set': {'password_hash': pw_hash}})
 
     # Users: Faculty
     if not database.users.find_one({'username': 'faculty'}):

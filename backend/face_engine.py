@@ -582,7 +582,7 @@ def process_single_frame(frame, session_id=None, require_liveness=False):
 
     face_locs = face_recognition.face_locations(rgb_small, model='hog')
     if not face_locs:
-        return {'success': True, 'faces': [], 'message': 'No face detected in frame'}
+        return {'success': True, 'faces_detected': 0, 'faces': [], 'message': 'No face detected in frame'}
 
     face_encs = face_recognition.face_encodings(rgb_small, face_locs)
     results = []

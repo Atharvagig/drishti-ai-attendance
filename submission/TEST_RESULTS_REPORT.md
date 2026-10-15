@@ -52,7 +52,31 @@ OK
 - test_08_delete_student_cascade: PASSED
 ```
 
-### 2. Migration Audit Verification (`backend/migrate_to_mongo.py`)
+### 2. Security, RBAC & Protection Suite (`tests/test_security_and_auth.py`)
+```text
+Ran 8 tests in 1.691s
+OK
+- test_01_unauthenticated_student_data_blocked: PASSED (HTTP 401/403)
+- test_02_unauthenticated_attendance_blocked: PASSED (HTTP 401/403)
+- test_03_unauthenticated_user_management_blocked: PASSED (HTTP 401/403)
+- test_04_unauthenticated_frame_recognition_blocked: PASSED (HTTP 401/403)
+- test_05_csrf_protection_on_mutating_requests: PASSED (HTTP 403 csrf_failed)
+- test_06_student_role_forbidden_from_admin_routes: PASSED (HTTP 403)
+- test_07_brute_force_lockout: PASSED (Account locked on 5th failure)
+- test_08_production_admin_password_enforcement: PASSED (Rejects default admin123)
+```
+
+### 3. Role-Based Access Control Scope Suite (`tests/test_rbac.py`)
+```text
+Ran 4 tests in 0.063s
+OK
+- test_roles_exist: PASSED (super_admin verified)
+- test_allowed_student_ids_super_admin: PASSED (Full access: None constraint)
+- test_allowed_student_ids_department_head: PASSED (Department-scoped list)
+- test_allowed_student_ids_student: PASSED (Restricted strictly to self ID)
+```
+
+### 4. Migration Audit Verification (`backend/migrate_to_mongo.py`)
 ```text
 ======================================================================
   MIGRATION VERIFICATION AUDIT REPORT
